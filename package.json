@@ -1,0 +1,37 @@
+{
+  "name": "finance-mgmt",
+  "version": "0.1.0",
+  "description": "A simple MongoDB Finance Overview for multiple sources / banks",
+  "main": "dist/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "node ./dist/server.js",
+    "dev": "nodemon --watch dist ./dist/server.js "
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lokmeinmatz/finance-mgmt.git"
+  },
+  "author": "lokmeinmatz <matze.kind@web.de>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lokmeinmatz/finance-mgmt/issues"
+  },
+  "homepage": "https://github.com/lokmeinmatz/finance-mgmt#readme",
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^16.11.11",
+    "nodemon": "^2.0.15",
+    "typescript": "^4.5.2"
+  },
+  "dependencies": {
+    "dayjs": "^1.10.7",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "express-fileupload": "^1.2.1",
+    "express-handlebars": "^6.0.2",
+    "mongoose": "^6.0.14"
+  }
+}

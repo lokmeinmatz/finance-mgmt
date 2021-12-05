@@ -1,0 +1,22 @@
+<table class="pure-table transactions-table">
+    <tr>
+        <th>Date</th>
+        <th>Bank</th>
+        <th>Amount</th>
+        <th>Sender/Receiver</th>
+        <th>Message</th>
+        <th>Account</th>
+        <th>Imported</th>
+    </tr>
+    {{#each transactions}}
+    <tr>
+        <td>{{this.date}}</td>
+        <td>{{this.bank}}</td>
+        <td class="transaction-amount {{#if isPositive}}pos{{else}}neg{{/if}}">{{this.amount}}</td>
+        <td>{{this.receiverOrSender}}</td>
+        <td>{{this.transactionMessage}}</td>
+        <td>{{this.account}}</td>
+        <td>{{this.imported}}</td>
+    </tr>
+    {{/each}}
+</table>
