@@ -5,6 +5,7 @@ import { engine } from 'express-handlebars'
 import filePostMiddleware from 'express-fileupload'
 import { startDKBImport } from './import-dkb'
 import { toPrintableTransaction, TransactionModel } from './model'
+import { startPSDImport } from './import-psd'
 
 console.log('finance-mgmt server')
 
@@ -13,6 +14,15 @@ dotenv.config()
 if (!process.env.MONGODB_URL) {
     console.error('provide env var MONGODB_URL')
     process.exit(-1)
+}
+
+const BANKS: { [key: string]: { csvImport?: (csv: string) => Promise<any> } } = {
+    dkb: {
+        csvImport: startDKBImport
+    },
+    psd: {
+        csvImport: startPSDImport // TODO use psd
+    }
 }
 
 async function main() {
@@ -39,20 +49,34 @@ async function main() {
     })
    
     app.get('/import', (req, res) => {
-        res.render('import/index.hbs')
+        res.render('import/index.hbs', {
+            csvBanks: Object.entries(BANKS).filter(([k, b]) => !!b.csvImport).map(a => a[0])
+        })
     })
     
 
-    app.get('/import/dkb', (req, res) => {
-        res.render('import/dkb.hbs')
+    app.get('/import/csv/:bank', (req, res) => {
+        if (!BANKS[req.params.bank]) {
+            return res.send('Unknown bank :(')
+        }
+        res.render(`import/csv_upload.hbs`, { bank: req.params.bank })
     })
+    
+    app.post('/import/csv/:bank', filePostMiddleware(), async (req, res) => {
+        const bankController = BANKS[req.params.bank]
+        if (!BANKS[req.params.bank]) {
+            return res.send('Unknown bank ' + req.params.bank)
+        }
 
-    app.post('/import/dkb', filePostMiddleware(), async (req, res) => {
-        const csvRaw = req.files?.dkb_csv?.data.toString();
-        if (!csvRaw) {res.send('No csv file received'); return}
+        if (!bankController.csvImport) {
+            return res.send(`Bank ${req.params.bank} has no csv import support`)
+        }
+        
+        const csvRaw = req.files?.csv?.data.toString();
+        if (!csvRaw) {return res.send('No csv file received')}
         try {
-            const state = await startDKBImport(csvRaw)
-            res.render('import/dkb_finished.hbs', { ...state, newTransactions: state.newTransactions.map(toPrintableTransaction)})
+            const state = await bankController.csvImport(csvRaw)
+            res.render('import/csv_finished.hbs', { ...state, bank: req.params.bank, newTransactions: state.newTransactions.map(toPrintableTransaction)})
             
         } catch (error: any) {
             console.error(error)

@@ -1,6 +1,8 @@
 <h1>Import</h1>
 <ul class="pure-menu-list">
-    <li>
-        <a href="/import/dkb">DKB</a>
-    </li>
+    {{#each csvBanks}}
+        <li>
+            <a href="/import/csv/{{this}}">{{this}}</a>
+        </li>
+    {{/each}}
 </ul>
