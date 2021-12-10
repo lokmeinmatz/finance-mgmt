@@ -1,6 +1,7 @@
-import { ITransaction, TransactionModel } from "./model";
+import { AccountSnapshotModel, IAccountSnapshot, ITransaction, TransactionModel } from "./model";
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
+import { genImportId, removeExistingTransactions } from "./util";
 dayjs.extend(customParseFormat)
 
 function log<T>(a: T): T {
@@ -30,6 +31,10 @@ CSV line schema 05.12.2021
 */
 
 export async function startPSDImport(csv: string) {
+
+
+    const importId = genImportId('psd')
+
     const parsedRows: string[][] = csv.split('\n').map(row => {
         if (!row.length || row === ';;;;;;;;;;;;;;;;') return undefined
 
@@ -37,19 +42,21 @@ export async function startPSDImport(csv: string) {
     }).filter(r => !!r) as string[][]
     
     const accNr = parsedRows.find(r => r.indexOf('Konto:') >= 0)?.[1]
-    /*
-    const currentBalanceStr = parsedRows.find(r => r[0].startsWith('Kontostand vom'))?.[1].replace('.', '').replace(',', '.')
-    if (!currentBalanceStr) {
-        throw new Error('missing line in csv: "Kontostand vom ..."')
+    const balanceRow = parsedRows.find(r => r[10]?.startsWith('Kontostand vom'))
+    if (!balanceRow) {
+        throw new Error('missing line in csv: "Endsaldo"')
     }
-    const currentBalance = parseFloat(currentBalanceStr)
-    console.log(`DKB import for acc ${accNr} balance ${currentBalance}`)
-    */
+    const balanceDate = dayjs(balanceRow[0], 'DD.MM.YYYY').toDate()
+    const currentBalanceStr = balanceRow[12].replace('.', '').replace(',', '.')
+    let currentBalance = parseFloat(currentBalanceStr)
+    if (balanceRow[13] === 'S') currentBalance *= -1
+    console.log(`PSD import for acc ${accNr} balance ${currentBalance}`)
+    
     const importDate = new Date()
     
     let oldest = new Date()
     let newest = new Date('1.1.2000')
-    debugger
+
     const possibleTransactions = parsedRows.filter(r => !!(r[0]?.match(/^\d+.\d+.\d+/) && r[1]?.match(/^\d+.\d+.\d+/))).map(r => {
         const date = dayjs(r[0], 'DD.MM.YYYY').toDate()
         const transactionSource = r.slice(4, 9).filter(e => e?.length).join('/')
@@ -69,7 +76,8 @@ export async function startPSDImport(csv: string) {
             source: 'import',
             account: accNr,
             receiverOrSender: log(transactionSource),
-            transactionMessage: verwendung
+            transactionMessage: verwendung,
+            importId
         }
         return transaction
     });
@@ -81,11 +89,22 @@ export async function startPSDImport(csv: string) {
 
     // fetch exisitng transactions in this period from DKB to exclude duplicate transactions
     const exsitingTransactions: ITransaction[] = await TransactionModel.find({ bank: 'PSD', date: { $gte: oldest, $lte: newest } }).exec()
-    const newTransactions = possibleTransactions.filter(pT => {
-        return !exsitingTransactions.find(eT => eT.transactionMessage === pT.transactionMessage && pT.date === eT.date && eT.amount === pT.amount && eT.receiverOrSender === pT.receiverOrSender )
-    })
+    const newTransactions = removeExistingTransactions(possibleTransactions, exsitingTransactions)
 
-    console.log(`Found ${newTransactions.length} new transactions`)
+    // store snapshot
+    const snapshot = new AccountSnapshotModel({
+        account: accNr,
+        balance: currentBalance,
+        bank: 'PSD',
+        date: balanceDate,
+        source: 'import',
+        imported: new Date(),
+        importId
+    } as IAccountSnapshot)
+
+    await snapshot.save()
+
+    console.log(`Saved snapshot. Found ${newTransactions.length} new transactions`)
     newTransactions.forEach(t => console.log(`\t${t.amount} by ${t.receiverOrSender}`))
 
     await TransactionModel.insertMany(newTransactions)

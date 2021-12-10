@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import express from 'express'
-import { engine } from 'express-handlebars'
+import { create, engine } from 'express-handlebars'
 import filePostMiddleware from 'express-fileupload'
 import { startDKBImport } from './import-dkb'
 import { toPrintableTransaction, TransactionModel } from './model'
@@ -25,6 +25,16 @@ const BANKS: { [key: string]: { csvImport?: (csv: string) => Promise<any> } } = 
     }
 }
 
+const handlebars = create({
+    helpers: {
+        json: (ctx: any) => {
+            return JSON.stringify(ctx)
+        }
+    },
+    defaultLayout: 'base.hbs',
+    extname: 'hbs'
+})
+
 async function main() {
     console.log('connecting...')
     await mongoose.connect(process.env.MONGODB_URL!)
@@ -32,10 +42,7 @@ async function main() {
     const app = express()
 
     // hbs
-    app.engine('hbs', engine({
-        defaultLayout: 'base.hbs',
-        extname: 'hbs'
-    }))
+    app.engine('hbs', handlebars.engine)
     app.set('view engine', 'handlebars')
     app.set('views', './views')
 

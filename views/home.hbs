@@ -1,2 +1,39 @@
 <h1>Home</h1>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.2/chart.min.js" integrity="sha512-tMabqarPtykgDtdtSqCL3uLVM0gS1ZkUAVhRFu1vSEFgvB73niFQWJuvviDyBGBH22Lcau4rHB5p2K2T0Xvr6Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+
+const labels = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+];
+const data = {
+  labels: labels,
+  datasets: [{
+    label: 'My First dataset',
+    backgroundColor: 'rgb(255, 99, 132)',
+    borderColor: 'rgb(255, 99, 132)',
+    data: [0, 10, 5, 2, 20, 30, 45],
+  }]
+};
+
+window.onload = () => {
+    const cumulativeChart = new Chart(
+        document.querySelector('canvas#cumulative'),
+        {
+            type: 'line',
+            data: data,
+            options: {}
+        }
+    )
+}
+
+
+</script>
+<div id="graphs">
+    <canvas id="cumulative"></canvas>
+</div>
 {{>transaction-table transactions=transactions}}
