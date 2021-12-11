@@ -1,39 +1,72 @@
 <h1>Home</h1>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.2/chart.min.js" integrity="sha512-tMabqarPtykgDtdtSqCL3uLVM0gS1ZkUAVhRFu1vSEFgvB73niFQWJuvviDyBGBH22Lcau4rHB5p2K2T0Xvr6Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.2/chart.min.js"
+  integrity="sha512-tMabqarPtykgDtdtSqCL3uLVM0gS1ZkUAVhRFu1vSEFgvB73niFQWJuvviDyBGBH22Lcau4rHB5p2K2T0Xvr6Q=="
+  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
 <script>
 
-const labels = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-];
-const data = {
-  labels: labels,
-  datasets: [{
-    label: 'My First dataset',
-    backgroundColor: 'rgb(255, 99, 132)',
-    borderColor: 'rgb(255, 99, 132)',
-    data: [0, 10, 5, 2, 20, 30, 45],
-  }]
-};
+  const labels = [new Date()]
 
-window.onload = () => {
+  let firstDayOfMonth = new Date();
+  firstDayOfMonth.setDate(1);
+
+  for (let i = 0; i < 12; i++) {
+    labels.unshift(firstDayOfMonth);
+    firstDayOfMonth = new Date(firstDayOfMonth) // clone
+    firstDayOfMonth.setDate(0)
+    firstDayOfMonth.setDate(1)
+  }
+
+  window.onload = async () => {
+
+    const res = await fetch('/api/chart-data?count=12&unit=M').then(r => r.json())
+
     const cumulativeChart = new Chart(
-        document.querySelector('canvas#cumulative'),
-        {
+      document.querySelector('canvas#cumulative'),
+      {
+        data: {
+          datasets: [{
+            type: 'bar',
+            label: 'Income',
+            data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2],
+            backgroundColor: 'green',
+            order: 3,
+            stack: 'Stack 0'
+          }, {
+            type: 'bar',
+            label: 'Expenses',
+            data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2].map(e => -e),
+            backgroundColor: 'red',
+            order: 3,
+            stack: 'Stack 0'
+          }, {
             type: 'line',
-            data: data,
-            options: {}
+            label: 'Total profit',
+            order: 1,
+            borderColor: 'blue',
+            data: [3, 2, 1, 2, 3, 2, 1, 2, 3, 2, 1, 2]
+          }],
+          labels
+        },
+        options: {
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                // Luxon format string
+                tooltipFormat: 'DD T'
+             }
+            }
+          }
         }
+      }
     )
-}
+  }
 
 
 </script>
 <div id="graphs">
-    <canvas id="cumulative"></canvas>
+  <canvas id="cumulative"></canvas>
 </div>
 {{>transaction-table transactions=transactions}}

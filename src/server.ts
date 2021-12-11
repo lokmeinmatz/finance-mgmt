@@ -6,6 +6,7 @@ import filePostMiddleware from 'express-fileupload'
 import { startDKBImport } from './import-dkb'
 import { toPrintableTransaction, TransactionModel } from './model'
 import { startPSDImport } from './import-psd'
+import ApiRouter from './api'
 
 console.log('finance-mgmt server')
 
@@ -91,6 +92,7 @@ async function main() {
         }
     })
 
+    app.use('/api', ApiRouter)
 
     app.listen(8000, () => {
         console.log('running on port 8000')
