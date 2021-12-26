@@ -4,7 +4,7 @@ import express from 'express'
 import { create, engine } from 'express-handlebars'
 import filePostMiddleware from 'express-fileupload'
 import { startDKBImport } from './import-dkb'
-import { toPrintableTransaction, TransactionModel } from './model'
+import { Bank, IAccountSnapshot, ITransaction, toPrintableTransaction, TransactionModel } from './model'
 import { startPSDImport } from './import-psd'
 import ApiRouter from './api'
 
@@ -17,12 +17,28 @@ if (!process.env.MONGODB_URL) {
     process.exit(-1)
 }
 
-const BANKS: { [key: string]: { csvImport?: (csv: string) => Promise<any> } } = {
+export interface CsvStagedImport {
+    // contains bank and id
+    snapshot: IAccountSnapshot,
+    newTransactions: ITransaction[]
+    duplicateTransactions: ITransaction[]
+    importDate: Date
+}
+
+export interface CsvImportResponse {
+    newTransactions: ITransaction[]
+    duplicateTransactions: ITransaction[]
+    importDate: Date
+}
+
+const stagedImports: Map<string, CsvStagedImport> = new Map();
+
+const BANKS: { [key: string]: { csvImportStage?: (csv: string) => Promise<CsvStagedImport> } } = {
     dkb: {
-        csvImport: startDKBImport
+        csvImportStage: startDKBImport
     },
     psd: {
-        csvImport: startPSDImport // TODO use psd
+        csvImportStage: startPSDImport // TODO use psd
     }
 }
 
@@ -58,7 +74,7 @@ async function main() {
    
     app.get('/import', (req, res) => {
         res.render('import/index.hbs', {
-            csvBanks: Object.entries(BANKS).filter(([k, b]) => !!b.csvImport).map(a => a[0])
+            csvBanks: Object.entries(BANKS).filter(([k, b]) => !!b.csvImportStage).map(a => a[0])
         })
     })
     
@@ -69,6 +85,27 @@ async function main() {
         }
         res.render(`import/csv_upload.hbs`, { bank: req.params.bank })
     })
+
+    app.get('/import/staged', (req, res) => {
+        res.send(`<ul>${
+            [...stagedImports.entries()].map(([id, data]) => {
+                return `<li><a href="/import/staged/${id}">${data.importDate} - ${data.snapshot.bank} / ${data.snapshot.account}</a></li>`
+            })
+        }</ul>`)
+    })
+
+    app.get('/import/staged/:id', (req, res) => {
+        if (!stagedImports.has(req.params.id)) {
+            res.status(404)
+            return res.send(`<h1>Unknown import ${req.params.id}</h1>`)
+        }
+
+        const stagedData = stagedImports.get(req.params.id)!
+
+        res.render('import/staged.hbs', {
+            ...stagedData
+        })
+    })
     
     app.post('/import/csv/:bank', filePostMiddleware(), async (req, res) => {
         const bankController = BANKS[req.params.bank]
@@ -76,15 +113,26 @@ async function main() {
             return res.send('Unknown bank ' + req.params.bank)
         }
 
-        if (!bankController.csvImport) {
+        if (!bankController.csvImportStage) {
             return res.send(`Bank ${req.params.bank} has no csv import support`)
         }
         
         const csvRaw = req.files?.csv?.data.toString();
         if (!csvRaw) {return res.send('No csv file received')}
         try {
-            const state = await bankController.csvImport(csvRaw)
-            res.render('import/csv_finished.hbs', { ...state, bank: req.params.bank, newTransactions: state.newTransactions.map(toPrintableTransaction)})
+            const stageResult = await bankController.csvImportStage(csvRaw)
+
+            stagedImports.set(stageResult.snapshot.importId, stageResult)
+
+            res.redirect(`/import/staged/${stageResult.snapshot.importId}`)
+            /*
+            res.render('import/csv_finished.hbs', { 
+                ...state, 
+                bank: req.params.bank, 
+                newTransactions: state.newTransactions.map(toPrintableTransaction),
+                duplicateTransactions: state.duplicateTransactions.map(toPrintableTransaction)
+            })
+            */
             
         } catch (error: any) {
             console.error(error)

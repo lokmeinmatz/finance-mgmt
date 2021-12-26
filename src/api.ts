@@ -1,6 +1,10 @@
 
 import express from 'express'
 import dayjs from 'dayjs'
+import isoWeek from 'dayjs/plugin/isoWeek'
+
+dayjs.extend(isoWeek)
+
 import { TransactionModel } from './model'
 
 const router = express.Router()
@@ -9,31 +13,16 @@ const router = express.Router()
 interface ChartDataResponse {
     from: string,
     to: string,
-    /**
-     * ISO date strings
-     */
-    labels: string[],
-    /**
-     * in euro, positive numbers
-     */
-    income: number[],
-    /**
-     * in euro, negative numbers 
-     */
-    expenses: number[],
-    /**
-     * in euro, income + expenses
-     */
-    profit: number[]
+    data: { label: string, income: number, expenses: number, profit: number }[]
 }
+
 router.get('/chart-data', async (req, res) => {
     try {
         const countQP = req.query.count
         if (typeof countQP !== 'string') throw new Error('Expected count=<number of unit steps> as query param')
         const count = parseInt(countQP)
         
-        const unit = req.query.unit
-        console.log(unit)
+        const unit: 'd' | 'w' | 'M' = req.query.unit as any
         if (typeof unit !== 'string' || !['d', 'w', 'M'].includes(unit)) throw new Error('Expected unit=d|w|M as query param')
      
         const from = dayjs().subtract(count, unit).startOf(unit as any)
@@ -91,27 +80,45 @@ router.get('/chart-data', async (req, res) => {
             }
         ]).exec()
     
-        console.log(aggr)
-        
-        const start = aggr[0]._id
+        const aggrMap = aggr.reduce((acc, curr) => { acc[curr._id] = curr; return acc }, {})
+        let currentSection = dayjs(from)
+        const data: { label: string, income: number, expenses: number, profit: number }[] = []
 
-        // TODO: aggr does not contain entries for days / weeks where no transactions happened.
-        // "simulate" the _id loop from `from` to `to` and fill gaps + generate labels
-        const expenses = aggr.filter(e => e._id.endsWith('false')).map(e => e.amount)
-        const income = aggr.filter(e => e._id.endsWith('true')).map(e => e.amount)
+        while (currentSection.isBefore(to)) {
+            let identifierStart = currentSection.year().toString() + '-'
+            
+            switch (unit) {
+                case 'd':
+                    identifierStart += (currentSection.month() + 1) + '-' + currentSection.date()
+                    break;
+                case 'w':
+                    identifierStart += currentSection.isoWeek()
+                    break;
+                case 'M':
+                    identifierStart += (currentSection.month() + 1)
+                    break;
+            }
 
-        const profit = expenses.map((e, idx) => e + income[idx])
-        const labels = []
+            const income = aggrMap[`${identifierStart}-true`]?.amount ?? 0
+            const expenses = aggrMap[`${identifierStart}-false`]?.amount ?? 0
+            const profit = income + expenses
+
+            data.push({
+                label: identifierStart,
+                income,
+                expenses,
+                profit
+            })
+
+            currentSection = currentSection.add(1, unit)
+        }
 
         const resPayload: ChartDataResponse = {
             from: from.toISOString(),
             to: to.toISOString(),
-            expenses,
-            income,
-            profit,
-            labels
+            data
         }
-        res.json(aggr)
+        res.json(resPayload)
     } catch (e) {
 
         return res.status(500).json((e as Error)?.message ?? JSON.stringify(e))

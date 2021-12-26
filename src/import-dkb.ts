@@ -1,7 +1,8 @@
 import { AccountSnapshotModel, IAccountSnapshot, ITransaction, TransactionModel } from "./model";
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
-import { genImportId, removeExistingTransactions } from "./util";
+import { genImportId, splitExistingTransactions } from "./util";
+import { CsvStagedImport } from "./server";
 dayjs.extend(customParseFormat)
 
 function log<T>(a: T): T {
@@ -9,7 +10,7 @@ function log<T>(a: T): T {
     return a
 }
 
-export async function startDKBImport(csv: string) {
+export async function startDKBImport(csv: string): Promise<CsvStagedImport> {
 
     const importId = genImportId('dkb')
 
@@ -29,6 +30,7 @@ export async function startDKBImport(csv: string) {
     }
 
     console.log('DKB account type: ' + accountType)
+    //debugger
 
     let accNr: string | undefined
     if (accountType === 'debit') {
@@ -36,6 +38,11 @@ export async function startDKBImport(csv: string) {
     } else {
         accNr = parsedRows.find(r => r.includes('Kreditkarte:'))?.[1]
     }
+
+    if (!accNr) {
+        throw new Error('Failed to find account id from csv')
+    }
+
     const balanceRow = parsedRows.find(r => r[0].startsWith(( accountType === 'debit' ) ? 'Kontostand vom' : 'Saldo:'))
     if (!balanceRow) {
         throw new Error('missing line in csv: "Kontostand vom ..."')
@@ -47,8 +54,21 @@ export async function startDKBImport(csv: string) {
     } else {
         balanceDate = dayjs(parsedRows.find(r => r[0] === 'Datum:')![1], 'DD.MM.YYYY').toDate()
     }
-    const currentBalanceStr = balanceRow[1].replace('.', '').replace(',', '.')
-    const currentBalance = parseFloat(currentBalanceStr)
+
+    let currentBalance: number
+    if (accountType === 'debit') {
+        const currentBalanceStr = balanceRow[1].replace('.', '').replace(',', '.')
+        currentBalance = parseFloat(currentBalanceStr)
+    } else {
+        if (balanceRow[1].includes(',')) {
+            throw new Error('balance format changed (contains ,), check import code')
+        }
+        const currentBalanceStr = balanceRow[1].replace(' EUR', '')
+        currentBalance = parseFloat(currentBalanceStr)
+    }
+    if (!Number.isFinite(currentBalance)) {
+        throw new Error('Failed to parse current balance ' + currentBalance)
+    }
     console.log(`DKB import for acc ${accNr} (${accountType}) balance ${currentBalance}`)
     const importDate = new Date()
     
@@ -85,10 +105,10 @@ export async function startDKBImport(csv: string) {
 
     // fetch exisitng transactions in this period from DKB to exclude duplicate transactions
     const exsitingTransactions: ITransaction[] = await TransactionModel.find({ bank: 'DKB', date: { $gte: oldest, $lte: newest } }).exec()
-    const newTransactions = removeExistingTransactions(possibleTransactions, exsitingTransactions)
+    const { newTAs, duplicateTAs } = splitExistingTransactions(possibleTransactions, exsitingTransactions)
 
-    // store snapshot
-    const snapshot = new AccountSnapshotModel({
+    // create snapshot
+    const snapshot: IAccountSnapshot ={
         account: accNr,
         balance: currentBalance,
         bank: 'DKB',
@@ -96,17 +116,15 @@ export async function startDKBImport(csv: string) {
         source: 'import',
         imported: new Date(),
         importId
-    } as IAccountSnapshot)
+    }
+    newTAs.forEach(t => console.log(`\t${t.amount} by ${t.receiverOrSender}`))
 
-    await snapshot.save()
-
-    console.log(`Saved snapshot. Found ${newTransactions.length} new transactions`)
-    newTransactions.forEach(t => console.log(`\t${t.amount} by ${t.receiverOrSender}`))
-
-    await TransactionModel.insertMany(newTransactions)
+    await TransactionModel.insertMany(newTAs)
 
     return {
-        newTransactions,
+        snapshot,
+        newTransactions: newTAs,
+        duplicateTransactions: duplicateTAs,
         importDate
     };
 }

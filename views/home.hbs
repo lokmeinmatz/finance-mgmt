@@ -5,7 +5,7 @@
 <script src="https://cdn.jsdelivr.net/npm/luxon@^2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@^1"></script>
 <script>
-
+  /*
   const labels = [new Date()]
 
   let firstDayOfMonth = new Date();
@@ -17,11 +17,15 @@
     firstDayOfMonth.setDate(0)
     firstDayOfMonth.setDate(1)
   }
+  */
 
   window.onload = async () => {
 
     const res = await fetch('/api/chart-data?count=12&unit=M').then(r => r.json())
 
+    const labels = res.data.map(d => d.label)
+
+    console.log(res)
     const cumulativeChart = new Chart(
       document.querySelector('canvas#cumulative'),
       {
@@ -29,14 +33,14 @@
           datasets: [{
             type: 'bar',
             label: 'Income',
-            data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2],
+            data: res.data.map(d => d.income),
             backgroundColor: 'green',
             order: 3,
             stack: 'Stack 0'
           }, {
             type: 'bar',
             label: 'Expenses',
-            data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2].map(e => -e),
+            data: res.data.map(d => d.expenses),
             backgroundColor: 'red',
             order: 3,
             stack: 'Stack 0'
@@ -45,21 +49,11 @@
             label: 'Total profit',
             order: 1,
             borderColor: 'blue',
-            data: [3, 2, 1, 2, 3, 2, 1, 2, 3, 2, 1, 2]
+            data: res.data.map(d => d.profit)
           }],
           labels
         },
-        options: {
-          scales: {
-            x: {
-              type: 'time',
-              time: {
-                // Luxon format string
-                tooltipFormat: 'DD T'
-             }
-            }
-          }
-        }
+        options: {}
       }
     )
   }

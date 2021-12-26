@@ -5,14 +5,24 @@ export function genImportId(bank: string): string {
     return `${bank}-${random}-${Date.now().toString(16)}`
 }
 
-export function removeExistingTransactions(newT: ITransaction[], existing: ITransaction[]): ITransaction[] {
-    return newT.filter(nT => {
-        return !existing.find(eT => {
+export function splitExistingTransactions(newT: ITransaction[], existing: ITransaction[]): { newTAs: ITransaction[], duplicateTAs: ITransaction[]} {
+    
+    const res = { newTAs: [] as ITransaction[], duplicateTAs: [] as ITransaction[] }
+    
+    for (const nT of newT) {
+        for (const eT of existing) {
             const m = eT.transactionMessage === nT.transactionMessage
             const d = Math.abs(nT.date.getTime() - eT.date.getTime()) < 1000 * 3600 * 24 // 1 day range
             const a = eT.amount === nT.amount
             const rs = eT.receiverOrSender === nT.receiverOrSender
-            return m && d && a && rs
-        })
-    })
+            if (m && d && a && rs) {
+                res.duplicateTAs.push(nT)
+            } else {
+                res.newTAs.push(nT)
+            }
+
+        }
+    }
+
+    return res
 }

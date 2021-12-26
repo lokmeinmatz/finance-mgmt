@@ -1,7 +1,8 @@
 import { AccountSnapshotModel, IAccountSnapshot, ITransaction, TransactionModel } from "./model";
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
-import { genImportId, removeExistingTransactions } from "./util";
+import { genImportId, splitExistingTransactions } from "./util";
+import { CsvStagedImport } from "./server";
 dayjs.extend(customParseFormat)
 
 function log<T>(a: T): T {
@@ -30,7 +31,7 @@ CSV line schema 05.12.2021
 
 */
 
-export async function startPSDImport(csv: string) {
+export async function startPSDImport(csv: string): Promise<CsvStagedImport> {
 
 
     const importId = genImportId('psd')
@@ -42,6 +43,9 @@ export async function startPSDImport(csv: string) {
     }).filter(r => !!r) as string[][]
     
     const accNr = parsedRows.find(r => r.indexOf('Konto:') >= 0)?.[1]
+    if (!accNr) {
+        throw new Error('Failed to get Account id: Line "Konto:" missing from csv')
+    }
     const balanceRow = parsedRows.find(r => r[10]?.startsWith('Kontostand vom'))
     if (!balanceRow) {
         throw new Error('missing line in csv: "Endsaldo"')
@@ -89,10 +93,9 @@ export async function startPSDImport(csv: string) {
 
     // fetch exisitng transactions in this period from DKB to exclude duplicate transactions
     const exsitingTransactions: ITransaction[] = await TransactionModel.find({ bank: 'PSD', date: { $gte: oldest, $lte: newest } }).exec()
-    const newTransactions = removeExistingTransactions(possibleTransactions, exsitingTransactions)
+    const { newTAs, duplicateTAs } = splitExistingTransactions(possibleTransactions, exsitingTransactions)
 
-    // store snapshot
-    const snapshot = new AccountSnapshotModel({
+    const snapshot: IAccountSnapshot = {
         account: accNr,
         balance: currentBalance,
         bank: 'PSD',
@@ -100,17 +103,18 @@ export async function startPSDImport(csv: string) {
         source: 'import',
         imported: new Date(),
         importId
-    } as IAccountSnapshot)
+    }
 
-    await snapshot.save()
 
-    console.log(`Saved snapshot. Found ${newTransactions.length} new transactions`)
-    newTransactions.forEach(t => console.log(`\t${t.amount} by ${t.receiverOrSender}`))
+    console.log(`created snapshot. Found ${newTAs.length} new transactions`)
+    newTAs.forEach(t => console.log(`\t${t.amount} by ${t.receiverOrSender}`))
 
-    await TransactionModel.insertMany(newTransactions)
+    await TransactionModel.insertMany(newTAs)
 
     return {
-        newTransactions,
+        snapshot,
+        newTransactions: newTAs,
+        duplicateTransactions: duplicateTAs,
         importDate
     };
 }

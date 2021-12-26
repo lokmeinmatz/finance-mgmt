@@ -1,14 +1,14 @@
 import dayjs from 'dayjs'
 import mongoose from 'mongoose'
 
-type Bank = 'DKB' | 'PSD'
-type TransactionSource = 'import' | 'manual'
+export type Bank = 'DKB' | 'PSD'
+export type TransactionSource = 'import' | 'manual'
 
 export function toDisplayDate(d: Date): string {
     return dayjs(d).format('DD.MM.YYYY HH:mm')
 }
 
-export function toPrintableTransaction(t: ITransaction): { [field in keyof ITransaction]: string } & { [key: string]: any } {
+export function toPrintableTransaction(t: ITransaction): PrintableITransaction {
     return {
         ...t,
         date: toDisplayDate(t.date),
@@ -29,6 +29,9 @@ export interface ITransaction {
     source: TransactionSource,
     importId: string
 }
+
+export type PrintableITransaction = Omit<ITransaction, 'date' | 'imported' | 'amount'> 
+    & { date: string, imported: string, amount: string, isPositive: boolean }
 
 
 export const TransactionSchema = new mongoose.Schema<ITransaction>({
