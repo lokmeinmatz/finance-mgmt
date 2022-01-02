@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import mongoose from 'mongoose'
+import mongoose, { Types } from 'mongoose'
 
 export type Bank = 'DKB' | 'PSD'
 export type TransactionSource = 'import' | 'manual'
@@ -19,6 +19,7 @@ export function toPrintableTransaction(t: ITransaction): PrintableITransaction {
 }
 
 export interface ITransaction {
+    _id: Types.ObjectId,
     bank: Bank,
     account?: string,
     date: Date,
@@ -27,7 +28,8 @@ export interface ITransaction {
     receiverOrSender?: string,
     imported: Date,
     source: TransactionSource,
-    importId: string
+    importId: string,
+    tags?: string[]
 }
 
 export type PrintableITransaction = Omit<ITransaction, 'date' | 'imported' | 'amount'> 
@@ -44,7 +46,8 @@ export const TransactionSchema = new mongoose.Schema<ITransaction>({
     imported: Date,
     source: String,
     // unique identifier per import process
-    importId: String
+    importId: String,
+    tags: { type: Array, required: false }
 })
 
 export const TransactionModel = mongoose.model('transaction', TransactionSchema)

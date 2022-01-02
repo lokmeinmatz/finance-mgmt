@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import { genImportId, splitExistingTransactions } from "./util";
 import { CsvStagedImport } from "./server";
+import { ObjectId, Types } from 'mongoose'
 dayjs.extend(customParseFormat)
 
 function log<T>(a: T): T {
@@ -85,6 +86,7 @@ export async function startDKBImport(csv: string): Promise<CsvStagedImport> {
         if (date < oldest) oldest = date
 
         const transaction: ITransaction = {
+            _id: new Types.ObjectId(),
             amount,
             bank: 'DKB',
             date,
@@ -118,8 +120,6 @@ export async function startDKBImport(csv: string): Promise<CsvStagedImport> {
         importId
     }
     newTAs.forEach(t => console.log(`\t${t.amount} by ${t.receiverOrSender}`))
-
-    await TransactionModel.insertMany(newTAs)
 
     return {
         snapshot,

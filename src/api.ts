@@ -6,6 +6,8 @@ import isoWeek from 'dayjs/plugin/isoWeek'
 dayjs.extend(isoWeek)
 
 import { TransactionModel } from './model'
+import { BankIds } from './util'
+import { BANKS } from './server'
 
 const router = express.Router()
 
@@ -123,6 +125,31 @@ router.get('/chart-data', async (req, res) => {
 
         return res.status(500).json((e as Error)?.message ?? JSON.stringify(e))
     }
+})
+
+router.post('/transactions', express.json(), (req, res) => {
+    console.log('/api/transactions', req.body)
+    TransactionModel.find(req.body ?? {}).exec().then(transactions => {
+        res.json(transactions)
+    }).catch(e => {
+        res.status(400)
+        res.json({
+            error: e.toString()
+        })
+    })
+})
+
+router.get('/parse/csv', (req, res) => {
+    res.json(BankIds.filter(id => BANKS[id].parseCsv))
+})
+
+router.post('/parse/csv/:bank', express.text(), (req, res) => {
+    const bank = req.params.bank
+    console.log(`parse csv for bank ${bank} triggered`)
+    if (!bank) {
+        throw new Error('unknown bank')
+    }
+
 })
 
 export default router

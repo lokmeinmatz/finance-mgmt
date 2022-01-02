@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import { genImportId, splitExistingTransactions } from "./util";
 import { CsvStagedImport } from "./server";
+import { Types } from "mongoose";
 dayjs.extend(customParseFormat)
 
 function log<T>(a: T): T {
@@ -73,6 +74,7 @@ export async function startPSDImport(csv: string): Promise<CsvStagedImport> {
         if (date < oldest) oldest = date
 
         const transaction: ITransaction = {
+            _id: new Types.ObjectId(),
             amount,
             bank: 'PSD',
             date,

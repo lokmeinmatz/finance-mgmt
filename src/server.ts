@@ -4,9 +4,11 @@ import express from 'express'
 import { create, engine } from 'express-handlebars'
 import filePostMiddleware from 'express-fileupload'
 import { startDKBImport } from './import-dkb'
-import { Bank, IAccountSnapshot, ITransaction, toPrintableTransaction, TransactionModel } from './model'
+import { IAccountSnapshot, ITransaction, toPrintableTransaction, TransactionModel } from './model'
 import { startPSDImport } from './import-psd'
+import { BankId } from './util'
 import ApiRouter from './api'
+
 
 console.log('finance-mgmt server')
 
@@ -17,7 +19,7 @@ if (!process.env.MONGODB_URL) {
     process.exit(-1)
 }
 
-export interface CsvStagedImport {
+export interface CsvParseResponse {
     // contains bank and id
     snapshot: IAccountSnapshot,
     newTransactions: ITransaction[]
@@ -25,20 +27,16 @@ export interface CsvStagedImport {
     importDate: Date
 }
 
-export interface CsvImportResponse {
-    newTransactions: ITransaction[]
-    duplicateTransactions: ITransaction[]
-    importDate: Date
-}
 
-const stagedImports: Map<string, CsvStagedImport> = new Map();
-
-const BANKS: { [key: string]: { csvImportStage?: (csv: string) => Promise<CsvStagedImport> } } = {
-    dkb: {
-        csvImportStage: startDKBImport
+export const BANKS: { [key in BankId]: { parseCsv?: (csv: string) => Promise<CsvParseResponse> } } = {
+    'DKB-Credit': {
+        parseCsv: startDKBImport
     },
-    psd: {
-        csvImportStage: startPSDImport // TODO use psd
+    'DKB-Debit': {
+        parseCsv: startDKBImport
+    },
+    'PSD': {
+        parseCsv: startPSDImport // TODO use psd
     }
 }
 
@@ -70,74 +68,6 @@ async function main() {
         res.render('home.hbs', {
             transactions: transactions.map(toPrintableTransaction)
         })
-    })
-   
-    app.get('/import', (req, res) => {
-        res.render('import/index.hbs', {
-            csvBanks: Object.entries(BANKS).filter(([k, b]) => !!b.csvImportStage).map(a => a[0])
-        })
-    })
-    
-
-    app.get('/import/csv/:bank', (req, res) => {
-        if (!BANKS[req.params.bank]) {
-            return res.send('Unknown bank :(')
-        }
-        res.render(`import/csv_upload.hbs`, { bank: req.params.bank })
-    })
-
-    app.get('/import/staged', (req, res) => {
-        res.send(`<ul>${
-            [...stagedImports.entries()].map(([id, data]) => {
-                return `<li><a href="/import/staged/${id}">${data.importDate} - ${data.snapshot.bank} / ${data.snapshot.account}</a></li>`
-            })
-        }</ul>`)
-    })
-
-    app.get('/import/staged/:id', (req, res) => {
-        if (!stagedImports.has(req.params.id)) {
-            res.status(404)
-            return res.send(`<h1>Unknown import ${req.params.id}</h1>`)
-        }
-
-        const stagedData = stagedImports.get(req.params.id)!
-
-        res.render('import/staged.hbs', {
-            ...stagedData
-        })
-    })
-    
-    app.post('/import/csv/:bank', filePostMiddleware(), async (req, res) => {
-        const bankController = BANKS[req.params.bank]
-        if (!BANKS[req.params.bank]) {
-            return res.send('Unknown bank ' + req.params.bank)
-        }
-
-        if (!bankController.csvImportStage) {
-            return res.send(`Bank ${req.params.bank} has no csv import support`)
-        }
-        
-        const csvRaw = req.files?.csv?.data.toString();
-        if (!csvRaw) {return res.send('No csv file received')}
-        try {
-            const stageResult = await bankController.csvImportStage(csvRaw)
-
-            stagedImports.set(stageResult.snapshot.importId, stageResult)
-
-            res.redirect(`/import/staged/${stageResult.snapshot.importId}`)
-            /*
-            res.render('import/csv_finished.hbs', { 
-                ...state, 
-                bank: req.params.bank, 
-                newTransactions: state.newTransactions.map(toPrintableTransaction),
-                duplicateTransactions: state.duplicateTransactions.map(toPrintableTransaction)
-            })
-            */
-            
-        } catch (error: any) {
-            console.error(error)
-            res.send(error.toString())
-        }
     })
 
     app.use('/api', ApiRouter)
