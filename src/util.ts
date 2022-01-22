@@ -26,11 +26,3 @@ export function splitExistingTransactions(newT: ITransaction[], existing: ITrans
     return res
 }
 
-
-export const BankIds = [
-    'DKB-Credit',
-    'DKB-Debit',
-    'PSD'
-] as const
-
-export type BankId = (typeof BankIds)[number]

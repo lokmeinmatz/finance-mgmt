@@ -5,127 +5,14 @@ import isoWeek from 'dayjs/plugin/isoWeek'
 
 dayjs.extend(isoWeek)
 
-import { TransactionModel } from './model'
-import { BankIds } from './util'
+import { AccountModel, AccountSnapshotModel, TransactionModel } from './model'
+import { genImportId } from './util'
 import { BANKS } from './server'
+import { chartRouter } from './api-charts'
 
 const router = express.Router()
 
-
-interface ChartDataResponse {
-    from: string,
-    to: string,
-    data: { label: string, income: number, expenses: number, profit: number }[]
-}
-
-router.get('/chart-data', async (req, res) => {
-    try {
-        const countQP = req.query.count
-        if (typeof countQP !== 'string') throw new Error('Expected count=<number of unit steps> as query param')
-        const count = parseInt(countQP)
-        
-        const unit: 'd' | 'w' | 'M' = req.query.unit as any
-        if (typeof unit !== 'string' || !['d', 'w', 'M'].includes(unit)) throw new Error('Expected unit=d|w|M as query param')
-     
-        const from = dayjs().subtract(count, unit).startOf(unit as any)
-        const to = dayjs()
-        console.log(`Gettin chart data for ${count} ${unit} (${from} to ${to})`)
-    
-        let groupIdConcat
-        switch (unit) {
-            case 'd':
-                groupIdConcat = [
-                    { $toString: {$year: '$date'} },
-                    '-',
-                    { $toString: {$month: '$date'} }, 
-                    '-',
-                    { $toString: {$dayOfMonth: '$date'} }, 
-                    '-',
-                    { $toString: {$gte: ['$amount', 0]} }
-                ]
-                break;
-            case 'w':
-                groupIdConcat = [
-                    { $toString: {$year: '$date'} },
-                    '-',
-                    { $toString: {$isoWeek: '$date'} },
-                    '-',
-                    { $toString: {$gte: ['$amount', 0]} }
-                ]
-                break;
-            case 'M':
-                groupIdConcat = [
-                    { $toString: {$year: '$date'} },
-                    '-',
-                    { $toString: {$month: '$date'} },
-                    '-',
-                    { $toString: {$gte: ['$amount', 0]} }
-                ]
-                break;
-        }
-
-        const aggr = await TransactionModel.aggregate([
-            {
-                $match: {
-                    date: {
-                        $gte: from.toDate()
-                    }
-                }
-            },
-            {
-                $group: {
-                    _id: { 
-                        $concat: groupIdConcat
-                    },
-                    amount: { $sum: '$amount' }
-                }
-            }
-        ]).exec()
-    
-        const aggrMap = aggr.reduce((acc, curr) => { acc[curr._id] = curr; return acc }, {})
-        let currentSection = dayjs(from)
-        const data: { label: string, income: number, expenses: number, profit: number }[] = []
-
-        while (currentSection.isBefore(to)) {
-            let identifierStart = currentSection.year().toString() + '-'
-            
-            switch (unit) {
-                case 'd':
-                    identifierStart += (currentSection.month() + 1) + '-' + currentSection.date()
-                    break;
-                case 'w':
-                    identifierStart += currentSection.isoWeek()
-                    break;
-                case 'M':
-                    identifierStart += (currentSection.month() + 1)
-                    break;
-            }
-
-            const income = aggrMap[`${identifierStart}-true`]?.amount ?? 0
-            const expenses = aggrMap[`${identifierStart}-false`]?.amount ?? 0
-            const profit = income + expenses
-
-            data.push({
-                label: identifierStart,
-                income,
-                expenses,
-                profit
-            })
-
-            currentSection = currentSection.add(1, unit)
-        }
-
-        const resPayload: ChartDataResponse = {
-            from: from.toISOString(),
-            to: to.toISOString(),
-            data
-        }
-        res.json(resPayload)
-    } catch (e) {
-
-        return res.status(500).json((e as Error)?.message ?? JSON.stringify(e))
-    }
-})
+router.use('/charts', chartRouter)
 
 router.post('/transactions', express.json(), (req, res) => {
     console.log('/api/transactions', req.body)
@@ -139,17 +26,40 @@ router.post('/transactions', express.json(), (req, res) => {
     })
 })
 
-router.get('/parse/csv', (req, res) => {
-    res.json(BankIds.filter(id => BANKS[id].parseCsv))
+router.post('/snapshots', express.json(), (req, res) => {
+    console.log('/api/snapshots', req.body)
+    AccountSnapshotModel.find(req.body ?? {}).sort({ date: 'desc' }).exec().then(snapshots => {
+        res.json(snapshots)
+    }).catch(e => {
+        res.status(400)
+        res.json({
+            error: e.toString()
+        })
+    })
 })
 
-router.post('/parse/csv/:bank', express.text(), (req, res) => {
-    const bank = req.params.bank
+router.get('/parse/csv', (req, res) => {
+    res.json(Object.entries(BANKS).filter(([_key, val]) => val.parseCsv).map(e => e[0]))
+})
+
+router.post('/parse/csv/:bank', express.text({ type: 'text/csv' }), async (req, res) => {
+    const bank: string | undefined = req.params.bank as any
     console.log(`parse csv for bank ${bank} triggered`)
-    if (!bank) {
+    if (!bank || !(bank in BANKS) || !BANKS[bank].parseCsv) {
         throw new Error('unknown bank')
     }
+    try {
+        const parsed = await BANKS[bank].parseCsv!(req.body, req.query.importId as string ?? genImportId(bank))
+        res.json(parsed)
+    } catch (error) {
+        res.status(400)
+        res.json({ error: (error as any).toString() })
+    }
+})
 
+router.get('/accounts', async (req, res) => {
+    const accounts = await AccountModel.find({})
+    res.json(accounts)
 })
 
 export default router

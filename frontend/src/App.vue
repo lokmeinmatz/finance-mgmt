@@ -3,10 +3,21 @@
 
 <template>
   <div id="app-root">
-    <nav class="pure-menu pure-menu-horizontal">
-      <div id="logo">Logo here</div>
-      <ul class="pure-menu-list">
-        <router-link to="/import">Import</router-link>
+    <nav>
+      <ul>
+        <li>
+          <router-link id="logo-wrapper" to="/">
+            <div id="logo">Logo here</div>
+          </router-link>
+        </li>
+      </ul>
+      <ul>
+        <li>
+          <router-link to="/import">Import</router-link>
+        </li>
+        <li>
+          <router-link to="/overview">Overview</router-link>
+        </li>
       </ul>
     </nav>
    <router-view></router-view>
@@ -14,6 +25,19 @@
 </template>
 
 <style lang="scss">
+$primary-hue: 190;
+@import "../node_modules/@picocss/pico/scss/pico.scss";
+
+@media only screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    // empty
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -21,21 +45,14 @@
   text-align: center;
   color: #2c3e50;
   --primary: #1a2d4b;
-  & nav.pure-menu {
+
+  & nav {
     padding: 0.5em;
-    background-color: var(--primary);
     display: flex;
-    color: white;
-
-    & #logo {
+    --spacing: 0.3rem;
+    & #logo-wrapper {
+      padding: 0;
       background-color: #2c3e50;
-    }
-
-    & .pure-menu-list {
-      margin-left: 1em;
-      & a {
-        color: white;
-      }
     }
   }
 }

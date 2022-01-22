@@ -1,9 +1,10 @@
-import { AccountSnapshotModel, IAccountSnapshot, ITransaction, TransactionModel } from "./model";
+import { AccountSnapshotModel, IAccountSnapshot, ITransaction, TransactionModel } from "../model";
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
-import { genImportId, splitExistingTransactions } from "./util";
-import { CsvStagedImport } from "./server";
+import { genImportId, splitExistingTransactions } from "../util";
 import { Types } from "mongoose";
+import { CsvParseResponse } from "../server";
+import { CsvParseFunc } from ".";
 dayjs.extend(customParseFormat)
 
 function log<T>(a: T): T {
@@ -32,11 +33,9 @@ CSV line schema 05.12.2021
 
 */
 
-export async function startPSDImport(csv: string): Promise<CsvStagedImport> {
+export const parsePSD: CsvParseFunc = async (csv: string, importId: string) => {
 
-
-    const importId = genImportId('psd')
-
+    
     const parsedRows: string[][] = csv.split('\n').map(row => {
         if (!row.length || row === ';;;;;;;;;;;;;;;;') return undefined
 
@@ -76,7 +75,6 @@ export async function startPSDImport(csv: string): Promise<CsvStagedImport> {
         const transaction: ITransaction = {
             _id: new Types.ObjectId(),
             amount,
-            bank: 'PSD',
             date,
             imported: importDate,
             source: 'import',
@@ -98,20 +96,14 @@ export async function startPSDImport(csv: string): Promise<CsvStagedImport> {
     const { newTAs, duplicateTAs } = splitExistingTransactions(possibleTransactions, exsitingTransactions)
 
     const snapshot: IAccountSnapshot = {
+        _id: new Types.ObjectId(),
         account: accNr,
         balance: currentBalance,
-        bank: 'PSD',
         date: balanceDate,
         source: 'import',
         imported: new Date(),
         importId
     }
-
-
-    console.log(`created snapshot. Found ${newTAs.length} new transactions`)
-    newTAs.forEach(t => console.log(`\t${t.amount} by ${t.receiverOrSender}`))
-
-    await TransactionModel.insertMany(newTAs)
 
     return {
         snapshot,

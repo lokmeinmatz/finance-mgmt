@@ -3,11 +3,11 @@ import dotenv from 'dotenv'
 import express from 'express'
 import { create, engine } from 'express-handlebars'
 import filePostMiddleware from 'express-fileupload'
-import { startDKBImport } from './import-dkb'
+import { startDKBImport } from './parsers/import-dkb'
 import { IAccountSnapshot, ITransaction, toPrintableTransaction, TransactionModel } from './model'
-import { startPSDImport } from './import-psd'
-import { BankId } from './util'
+import { parsePSD } from './parsers/import-psd'
 import ApiRouter from './api'
+import { CsvParseFunc } from './parsers'
 
 
 console.log('finance-mgmt server')
@@ -28,15 +28,15 @@ export interface CsvParseResponse {
 }
 
 
-export const BANKS: { [key in BankId]: { parseCsv?: (csv: string) => Promise<CsvParseResponse> } } = {
+export const BANKS: { [key: string]: { parseCsv?: CsvParseFunc } } = {
     'DKB-Credit': {
         parseCsv: startDKBImport
     },
-    'DKB-Debit': {
+    'DKB-Giro': {
         parseCsv: startDKBImport
     },
-    'PSD': {
-        parseCsv: startPSDImport // TODO use psd
+    'PSD-Giro': {
+        parseCsv: parsePSD // TODO use psd
     }
 }
 

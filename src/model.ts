@@ -20,7 +20,6 @@ export function toPrintableTransaction(t: ITransaction): PrintableITransaction {
 
 export interface ITransaction {
     _id: Types.ObjectId,
-    bank: Bank,
     account?: string,
     date: Date,
     amount: number,
@@ -37,8 +36,7 @@ export type PrintableITransaction = Omit<ITransaction, 'date' | 'imported' | 'am
 
 
 export const TransactionSchema = new mongoose.Schema<ITransaction>({
-    bank: String,
-    account: { type: String, required: false },
+    account: String,
     date: Date,
     amount: Number,
     transactionMessage: {type: String, required: false},
@@ -55,7 +53,7 @@ export const TransactionModel = mongoose.model('transaction', TransactionSchema)
 /* AccountSnapshot */
 
 export interface IAccountSnapshot {
-    bank: Bank,
+    _id: Types.ObjectId,
     account: string,
     date: Date,
     balance: number,
@@ -66,8 +64,7 @@ export interface IAccountSnapshot {
 
 
 export const AccountSnapshotSchema = new mongoose.Schema<IAccountSnapshot>({
-    bank: String,
-    account:String,
+    account: String,
     date: Date,
     balance: Number,
     imported: Date,
@@ -76,3 +73,21 @@ export const AccountSnapshotSchema = new mongoose.Schema<IAccountSnapshot>({
 })
 
 export const AccountSnapshotModel = mongoose.model('account-snapshot', AccountSnapshotSchema)
+
+export interface IAccount {
+    _id: string,
+    bank: Bank,
+    name: string,
+    type?: string,
+    currentBalance?: number
+}
+
+export const AccountSchema = new mongoose.Schema<IAccount>({
+    _id: String,
+    bank: String,
+    name: String,
+    type: { type: String, required: false },
+    currentBalance: { type: Number, required: false }
+})
+
+export const AccountModel = mongoose.model('account', AccountSchema);

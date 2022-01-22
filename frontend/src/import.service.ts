@@ -1,6 +1,6 @@
 import { BehaviorSubject, Observable } from "rxjs";
 import { IAccountSnapshot, ITransaction } from "../../src/model";
-import { BankId, genImportId } from '../../src/util'
+import { genImportId } from '../../src/util'
 import { CsvParseResponse } from '../../src/server'
 
 export interface CsvStagedImport {
@@ -14,7 +14,7 @@ export interface CsvStagedImport {
 const stagedImports: Map<string, CsvStagedImport> = new Map();
 
 
-type ImportState = {
+export type ImportState = {
     type: 'error',
     error: string
 } | {
@@ -27,35 +27,40 @@ type ImportState = {
 
 class ImportServiceClass {
 
-    private _csvBanks?: BankId[]
-    async getCsvBankIds(): Promise<BankId[]> {
+    private _csvBanks?: string[]
+    async getCsvBankIds(): Promise<string[]> {
         if (this._csvBanks) return this._csvBanks
         return fetch('/api/parse/csv').then(r => r.json())
     }
 
     private importStates = new Map<string, BehaviorSubject<ImportState>>()
 
-    getImportState(importId: string): Observable<ImportState> | undefined {
+    getImportState(importId: string): BehaviorSubject<ImportState> | undefined {
         return this.importStates.get(importId)
     }
 
     /**
      * @returns the import id
      */
-    startImport(csvFile: File, bank: BankId): string {
+    startImport(csvFile: File, bank: string): string {
         const importId = genImportId(bank)
 
         const obs = new Observable<ImportState>(subscriber => {
             (async function() {
-                const apiRes = await fetch(`/api/parse/csv/${bank}`, {
+                const apiRes = await fetch(`/api/parse/csv/${bank}?importId=${importId}`, {
                     method: 'POST',
                     body: csvFile
                 })
                 if (apiRes.status !== 200) {
-                    subscriber.next({ type: 'error', error: await apiRes.text() })
+                    subscriber.error({ type: 'error', error: await apiRes.text() })
                     return
                 }
                 const data: CsvParseResponse = await apiRes.json()
+                if (data && data.snapshot && data.importDate) {
+                    subscriber.next({ type: 'finished', staged: data })
+                    subscriber.complete()
+                }
+                subscriber.error('unknown data')
             })()
         })
 
@@ -69,4 +74,5 @@ class ImportServiceClass {
     }
 }
 
-export const ImportService = new ImportServiceClass()
+export const ImportService = new ImportServiceClass();
+(window as any).ImportService = ImportService

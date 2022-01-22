@@ -1,9 +1,9 @@
-import { AccountSnapshotModel, IAccountSnapshot, ITransaction, TransactionModel } from "./model";
+import { AccountSnapshotModel, IAccountSnapshot, ITransaction, TransactionModel } from "../model";
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
-import { genImportId, splitExistingTransactions } from "./util";
-import { CsvStagedImport } from "./server";
+import { genImportId, splitExistingTransactions } from "../util";
 import { ObjectId, Types } from 'mongoose'
+import { CsvParseFunc } from ".";
 dayjs.extend(customParseFormat)
 
 function log<T>(a: T): T {
@@ -11,9 +11,7 @@ function log<T>(a: T): T {
     return a
 }
 
-export async function startDKBImport(csv: string): Promise<CsvStagedImport> {
-
-    const importId = genImportId('dkb')
+export const startDKBImport: CsvParseFunc = async (csv: string, importId: string) => {
 
     const parsedRows: string[][] = csv.split('\n').map(row => {
         if (!row.length) return undefined
@@ -35,7 +33,7 @@ export async function startDKBImport(csv: string): Promise<CsvStagedImport> {
 
     let accNr: string | undefined
     if (accountType === 'debit') {
-        accNr = parsedRows.find(r => r.includes('Kontonummer:'))?.[1]
+        accNr = parsedRows.find(r => r.includes('Kontonummer:'))?.[1]?.replace(' / Girokonto', '')
     } else {
         accNr = parsedRows.find(r => r.includes('Kreditkarte:'))?.[1]
     }
@@ -43,6 +41,8 @@ export async function startDKBImport(csv: string): Promise<CsvStagedImport> {
     if (!accNr) {
         throw new Error('Failed to find account id from csv')
     }
+
+    // TODO: check if accNr exists
 
     const balanceRow = parsedRows.find(r => r[0].startsWith(( accountType === 'debit' ) ? 'Kontostand vom' : 'Saldo:'))
     if (!balanceRow) {
@@ -88,7 +88,6 @@ export async function startDKBImport(csv: string): Promise<CsvStagedImport> {
         const transaction: ITransaction = {
             _id: new Types.ObjectId(),
             amount,
-            bank: 'DKB',
             date,
             imported: importDate,
             source: 'import',
@@ -111,15 +110,14 @@ export async function startDKBImport(csv: string): Promise<CsvStagedImport> {
 
     // create snapshot
     const snapshot: IAccountSnapshot ={
+        _id: new Types.ObjectId(),
         account: accNr,
         balance: currentBalance,
-        bank: 'DKB',
         date: balanceDate,
         source: 'import',
         imported: new Date(),
         importId
     }
-    newTAs.forEach(t => console.log(`\t${t.amount} by ${t.receiverOrSender}`))
 
     return {
         snapshot,
