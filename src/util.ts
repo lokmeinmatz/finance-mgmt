@@ -1,4 +1,4 @@
-import { ITransaction } from "./model"
+import { ITransaction } from "@shared/model"
 
 export function genImportId(bank: string): string {
     const random = Math.floor(1000 + Math.random()*1000).toString(16)
@@ -25,4 +25,3 @@ export function splitExistingTransactions(newT: ITransaction[], existing: ITrans
 
     return res
 }
-

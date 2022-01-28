@@ -1,8 +1,9 @@
 
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from './views/Home.vue'
-import ImportStart from './views/ImportStart.vue'
-import ImportStaged from './views/ImportStaged.vue'
+import ImportStart from './views/import/ImportStart.vue'
+import ImportStaged from './views/import/ImportStaged.vue'
+import ImportFinished from './views/import/ImportFinished.vue'
 import Overview from './views/Overview.vue'
 
 export const router = createRouter({
@@ -24,6 +25,10 @@ export const router = createRouter({
         {
             path: '/import/staged/:id',
             component: ImportStaged
+        },
+        {
+            path: '/import/finished/:id',
+            component: ImportFinished
         }
     ], // short for `routes: routes`
   })

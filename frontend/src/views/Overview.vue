@@ -1,33 +1,41 @@
 <script lang="ts">
 import { defineComponent, ref } from '@vue/runtime-core';
-import { ChartDataResponse } from '../../../src/api';
 import { IAccountSnapshot } from '../../../src/model';
 import SnapshotChart from '../components/SnapshotChart.vue';
 import SnapshotList from '../components/SnapshotList.vue';
 import Popup from '../components/Popup.vue';
 import AddSnapshot from '../components/AddSnapshot.vue';
+import { fetchParse200JSON } from '../util';
 
 type ChartState = {
 	mode: 'accumulated',
 	chartData?: any
 } | {
-	mode: 'monthly',
+	mode: 'relative',
 	chartData?: any
 }
 
 export default defineComponent({
 	setup() {
 
-		const chartState = ref<ChartState>({ mode: 'monthly' })
+		const chartState = ref<ChartState>({ mode: 'relative' })
 		const snapshots = ref<IAccountSnapshot[]>()
 		const showAddSnapshotPopup = ref(false)
 
 		async function loadChartData() {
 			try {
-				const res = await fetch('/api/charts/monthly?count=12&unit=M').then(r => r.json())
+				let res
+				switch (chartState.value.mode) {
+					case 'accumulated':
+						res = await fetch('/api/charts/accumulated?count=12&unit=M').then(fetchParse200JSON)
+						break;
+					case 'relative':
+						res = await fetch('/api/charts/relative?count=12&unit=M').then(fetchParse200JSON)
+						break;
+				}
 				chartState.value.chartData = res
 			} catch (error) {
-				alert(error)
+				alert(JSON.stringify(error))
 			}
 		}
 
@@ -36,7 +44,7 @@ export default defineComponent({
 				const res = await fetch('/api/snapshots', { method: 'POST' }).then(r => r.json())
 				snapshots.value = res
 			} catch (error) {
-				alert(error)
+				alert(JSON.stringify(error))
 			}
 		}
 
@@ -46,7 +54,8 @@ export default defineComponent({
 		return {
 			chartState,
 			snapshots,
-			showAddSnapshotPopup
+			showAddSnapshotPopup,
+			loadChartData
 		};
 	},
 	components: { SnapshotChart, SnapshotList, Popup, AddSnapshot }
@@ -59,12 +68,12 @@ export default defineComponent({
 		<div class="button-group">
 			<button 
 				:class="{ outline: chartState.mode !== 'accumulated' }"
-				@click="chartState.mode = 'accumulated'">Accumulated</button>
+				@click="chartState.mode = 'accumulated'; loadChartData()">Accumulated</button>
 			<button
-				:class="{ outline: chartState.mode !== 'monthly' }"
-				@click="chartState.mode = 'monthly'">Monthly</button>
+				:class="{ outline: chartState.mode !== 'relative' }"
+				@click="chartState.mode = 'relative'; loadChartData()">Relative</button>
 		</div>
-		<SnapshotChart v-if="chartState.mode === 'monthly' && chartState.chartData" :chartData="chartState.chartData" />
+		<SnapshotChart v-if="chartState.mode === 'relative' && chartState.chartData" :chartData="chartState.chartData" />
 		<p v-else>Loading chart data</p>
 		<SnapshotList v-if="snapshots" :snapshots="snapshots"></SnapshotList>
 		<p v-else>Loading snapshots</p>

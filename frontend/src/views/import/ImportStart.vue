@@ -1,19 +1,17 @@
 <script lang="ts">
 import { defineComponent, ref, watch } from '@vue/runtime-core';
+import { inject } from 'vue';
 import { useRouter } from 'vue-router';
-import { BankId } from '../../../src/util'
-import { ImportService, ImportState } from '../import.service';
+import { ImportServiceKey, ImportState } from '../../import.service';
 
 export default defineComponent({
 
   setup() {
-    const importModes = ref<BankId[]>([])
+    const importService = inject(ImportServiceKey)!
+    const importModes = importService.getSupportedBanks()
     const router = useRouter()
 
-    ImportService.getCsvBankIds().then(ids => importModes.value = ids)
-
-    const importMode = ref<BankId | undefined>(undefined)
-    const importStatus = ref<ImportState>()
+    const importMode = ref<string | undefined>(undefined)
 
     watch(importModes, (modes) => importMode.value = modes[0])
 
@@ -24,12 +22,11 @@ export default defineComponent({
 
       if (!importMode.value) return alert('select import mode')
 
-      const importId = ImportService.startImport(importFileRef.value.files[0], importMode.value)
+      const { id: importId, state } = importService.startParsing(importMode.value, 'csv', importFileRef.value.files[0])
       console.log('started new import ' + importId)
 
-      const sub = ImportService.getImportState(importId)?.subscribe(state => {
-        importStatus.value = state
-        if (state.type === 'finished') {
+      const sub = state.subscribe(state => {
+        if (state.state === 'staged') {
           router.push(`/import/staged/${importId}`)
           sub?.unsubscribe()
         }
@@ -37,7 +34,6 @@ export default defineComponent({
     }
 
     return {
-      importStatus,
       startImport,
       importFileRef,
       importMode,
@@ -55,7 +51,6 @@ export default defineComponent({
     </select>
     <input ref="importFileRef" type="file" accept=".csv">
     <button @click="startImport">Start Import</button>
-    <p v-if="importStatus">{{ importStatus.type }}</p>
   </main>
 </template>
 

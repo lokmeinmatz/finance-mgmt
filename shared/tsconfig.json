@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "target": "es2015", // Or whatever you want
+        "module": "es2020", // Or whatever you want
+        "moduleResolution": "node",
+        "declaration": true,
+        "declarationMap": true,
+        "outDir": "./dist",
+        "composite": true
+    }
+}

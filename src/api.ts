@@ -7,10 +7,24 @@ dayjs.extend(isoWeek)
 
 import { AccountModel, AccountSnapshotModel, TransactionModel } from './model'
 import { genImportId } from './util'
-import { BANKS } from './server'
 import { chartRouter } from './api-charts'
+import PARSER_BANKS from './parsers'
 
 const router = express.Router()
+
+
+router.use((req, res, next) => {
+    const start = Date.now()
+    const logReq = () => {
+        console.log(`HTTP ${req.url} => ${res.statusCode} [${Date.now() - start}ms]`)
+    }
+
+    res.on('error', logReq)
+    res.on('finish', logReq)
+
+    next()
+})
+
 
 router.use('/charts', chartRouter)
 
@@ -27,7 +41,6 @@ router.post('/transactions', express.json(), (req, res) => {
 })
 
 router.post('/snapshots', express.json(), (req, res) => {
-    console.log('/api/snapshots', req.body)
     AccountSnapshotModel.find(req.body ?? {}).sort({ date: 'desc' }).exec().then(snapshots => {
         res.json(snapshots)
     }).catch(e => {
@@ -39,17 +52,18 @@ router.post('/snapshots', express.json(), (req, res) => {
 })
 
 router.get('/parse/csv', (req, res) => {
-    res.json(Object.entries(BANKS).filter(([_key, val]) => val.parseCsv).map(e => e[0]))
+    res.json(Object.entries(PARSER_BANKS).filter(([_key, val]) => val.csv).map(e => e[0]))
 })
 
 router.post('/parse/csv/:bank', express.text({ type: 'text/csv' }), async (req, res) => {
+    debugger
     const bank: string | undefined = req.params.bank as any
     console.log(`parse csv for bank ${bank} triggered`)
-    if (!bank || !(bank in BANKS) || !BANKS[bank].parseCsv) {
+    if (!bank || !(bank in PARSER_BANKS) || !PARSER_BANKS[bank].csv) {
         throw new Error('unknown bank')
     }
     try {
-        const parsed = await BANKS[bank].parseCsv!(req.body, req.query.importId as string ?? genImportId(bank))
+        const parsed = await PARSER_BANKS[bank].csv!(req.body, req.query.importId as string ?? genImportId(bank))
         res.json(parsed)
     } catch (error) {
         res.status(400)

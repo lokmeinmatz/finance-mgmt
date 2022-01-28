@@ -1,8 +1,6 @@
 import dayjs from 'dayjs'
-import mongoose, { Types } from 'mongoose'
-
-export type Bank = 'DKB' | 'PSD'
-export type TransactionSource = 'import' | 'manual'
+import mongoose, { Schema, Types } from 'mongoose'
+import { IAccount, IAccountSnapshot, ITransaction, PrintableITransaction } from '@shared/model'
 
 export function toDisplayDate(d: Date): string {
     return dayjs(d).format('DD.MM.YYYY HH:mm')
@@ -17,23 +15,6 @@ export function toPrintableTransaction(t: ITransaction): PrintableITransaction {
         imported: toDisplayDate(t.imported)
     };
 }
-
-export interface ITransaction {
-    _id: Types.ObjectId,
-    account?: string,
-    date: Date,
-    amount: number,
-    transactionMessage?: string,
-    receiverOrSender?: string,
-    imported: Date,
-    source: TransactionSource,
-    importId: string,
-    tags?: string[]
-}
-
-export type PrintableITransaction = Omit<ITransaction, 'date' | 'imported' | 'amount'> 
-    & { date: string, imported: string, amount: string, isPositive: boolean }
-
 
 export const TransactionSchema = new mongoose.Schema<ITransaction>({
     account: String,
@@ -50,18 +31,6 @@ export const TransactionSchema = new mongoose.Schema<ITransaction>({
 
 export const TransactionModel = mongoose.model('transaction', TransactionSchema)
 
-/* AccountSnapshot */
-
-export interface IAccountSnapshot {
-    _id: Types.ObjectId,
-    account: string,
-    date: Date,
-    balance: number,
-    imported: Date,
-    source: TransactionSource,
-    importId: string
-}
-
 
 export const AccountSnapshotSchema = new mongoose.Schema<IAccountSnapshot>({
     account: String,
@@ -69,18 +38,12 @@ export const AccountSnapshotSchema = new mongoose.Schema<IAccountSnapshot>({
     balance: Number,
     imported: Date,
     source: String,
-    importId: String
+    importId: String,
+    rawImportData: { type: Schema.Types.Mixed, required: false }
 })
 
 export const AccountSnapshotModel = mongoose.model('account-snapshot', AccountSnapshotSchema)
 
-export interface IAccount {
-    _id: string,
-    bank: Bank,
-    name: string,
-    type?: string,
-    currentBalance?: number
-}
 
 export const AccountSchema = new mongoose.Schema<IAccount>({
     _id: String,

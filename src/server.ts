@@ -1,13 +1,8 @@
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import express from 'express'
-import { create, engine } from 'express-handlebars'
-import filePostMiddleware from 'express-fileupload'
-import { startDKBImport } from './parsers/import-dkb'
-import { IAccountSnapshot, ITransaction, toPrintableTransaction, TransactionModel } from './model'
-import { parsePSD } from './parsers/import-psd'
+import { toPrintableTransaction, TransactionModel } from './model'
 import ApiRouter from './api'
-import { CsvParseFunc } from './parsers'
 
 
 console.log('finance-mgmt server')
@@ -19,36 +14,6 @@ if (!process.env.MONGODB_URL) {
     process.exit(-1)
 }
 
-export interface CsvParseResponse {
-    // contains bank and id
-    snapshot: IAccountSnapshot,
-    newTransactions: ITransaction[]
-    duplicateTransactions: ITransaction[]
-    importDate: Date
-}
-
-
-export const BANKS: { [key: string]: { parseCsv?: CsvParseFunc } } = {
-    'DKB-Credit': {
-        parseCsv: startDKBImport
-    },
-    'DKB-Giro': {
-        parseCsv: startDKBImport
-    },
-    'PSD-Giro': {
-        parseCsv: parsePSD // TODO use psd
-    }
-}
-
-const handlebars = create({
-    helpers: {
-        json: (ctx: any) => {
-            return JSON.stringify(ctx)
-        }
-    },
-    defaultLayout: 'base.hbs',
-    extname: 'hbs'
-})
 
 async function main() {
     console.log('connecting...')
@@ -56,10 +21,6 @@ async function main() {
     console.log(`Connected to db ${process.env.MONGODB_URL}`)
     const app = express()
 
-    // hbs
-    app.engine('hbs', handlebars.engine)
-    app.set('view engine', 'handlebars')
-    app.set('views', './views')
 
     app.get('/', async (req, res) => {
 

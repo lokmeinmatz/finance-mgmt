@@ -1,9 +1,10 @@
-import { AccountSnapshotModel, IAccountSnapshot, ITransaction, TransactionModel } from "../model";
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
-import { genImportId, splitExistingTransactions } from "../util";
+import { splitExistingTransactions } from "../util"
 import { ObjectId, Types } from 'mongoose'
-import { CsvParseFunc } from ".";
+import { IAccountSnapshot, ITransaction, ParseFunc, StagedImport } from '@shared/model'
+import { TransactionModel } from '../model'
+
 dayjs.extend(customParseFormat)
 
 function log<T>(a: T): T {
@@ -11,7 +12,7 @@ function log<T>(a: T): T {
     return a
 }
 
-export const startDKBImport: CsvParseFunc = async (csv: string, importId: string) => {
+export const startDKBImport: ParseFunc = async (csv: string, importId: string) => {
 
     const parsedRows: string[][] = csv.split('\n').map(row => {
         if (!row.length) return undefined
@@ -119,10 +120,13 @@ export const startDKBImport: CsvParseFunc = async (csv: string, importId: string
         importId
     }
 
-    return {
+    const stagedImport: StagedImport = {
         snapshot,
         newTransactions: newTAs,
         duplicateTransactions: duplicateTAs,
-        importDate
+        importDate,
+        rawImportData: csv
     };
+
+    return stagedImport
 }

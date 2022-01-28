@@ -1,26 +1,31 @@
 <script setup lang="ts">
+import { provide } from 'vue';
+import { ImportService, ImportServiceKey } from './import.service';
+
+// dependency injection
+provide(ImportServiceKey, new ImportService())
 </script>
 
 <template>
-  <div id="app-root">
-    <nav>
-      <ul>
-        <li>
-          <router-link id="logo-wrapper" to="/">
-            <div id="logo">Logo here</div>
-          </router-link>
-        </li>
-      </ul>
-      <ul>
-        <li>
-          <router-link to="/import">Import</router-link>
-        </li>
-        <li>
-          <router-link to="/overview">Overview</router-link>
-        </li>
-      </ul>
-    </nav>
-   <router-view></router-view>
+  <nav>
+    <ul>
+      <li>
+        <router-link id="logo-wrapper" to="/">
+          <div id="logo">Logo here</div>
+        </router-link>
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <router-link to="/import">Import</router-link>
+      </li>
+      <li>
+        <router-link to="/overview">Overview</router-link>
+      </li>
+    </ul>
+  </nav>
+  <div class="router-outlet">
+    <router-view></router-view>
   </div>
 </template>
 
@@ -53,6 +58,16 @@ $primary-hue: 190;
     & #logo-wrapper {
       padding: 0;
       background-color: #2c3e50;
+    }
+  }
+
+  & .router-outlet {
+    margin: 0 auto;
+    max-width: 600px;
+    padding: 0 1rem;
+
+    @media screen and (min-width: 1000px) {
+      max-width: 800px;
     }
   }
 }

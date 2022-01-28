@@ -1,21 +1,25 @@
 import express from 'express'
 import dayjs from 'dayjs'
-import { AccountModel, AccountSnapshotModel, IAccountSnapshot, TransactionModel } from './model'
+import { AccountModel, TransactionModel } from './model'
 import { BSTreeKV } from 'typescript-collections'
+import { IAccountSnapshot } from '@shared/model'
 
 export const chartRouter = express.Router()
 
-
-export interface MonthlyChartDataResponse {
-    from: string,
-    to: string,
-    data: { label: string, income: number, expenses: number, profit: number }[]
+export interface ChartDataResponse<T> {
+    type: string,
+    from: string | number,
+    to: string | number,
+    data: T[]
 }
 
+export type RelativeChartDataResponse = ChartDataResponse<{ label: string, income: number, expenses: number, profit: number }>;
+export type AccumulatedChartDataResponse = ChartDataResponse<{ label: string, ranges: { [acc: string]: { min: number, max: number } } }>;
+
 /**
- * /api/charts/monthly?count=[number]&unit=['d' | 'w' | 'M']
+ * /api/charts/relative?count=[number]&unit=['d' | 'w' | 'M']
  */
-chartRouter.get('/monthly', async (req, res) => {
+chartRouter.get('/relative', async (req, res) => {
     try {
         const countQP = req.query.count
         if (typeof countQP !== 'string') throw new Error('Expected count=<number of unit steps> as query param')
@@ -112,7 +116,8 @@ chartRouter.get('/monthly', async (req, res) => {
             currentSection = currentSection.add(1, unit)
         }
 
-        const resPayload: MonthlyChartDataResponse = {
+        const resPayload: RelativeChartDataResponse = {
+            type: 'relative',
             from: from.toISOString(),
             to: to.toISOString(),
             data
@@ -124,24 +129,15 @@ chartRouter.get('/monthly', async (req, res) => {
     }
 })
 
-interface RangeMinMax<R extends number | Date, U> {
-    from: R
-    to: R
-    min: U
-    max: U
+interface TransactionGroup {
+    startValue: number,
+    endValue: number,
+
 }
 
-export interface AbsoluteChartDataResponse {
-    unit: 'd' | 'w' | 'M'
-    count: number,
-    data: {
-        [key: string]: RangeMinMax<Date, number>[]
-    }
-}
-
-interface DateSnapshots {
+interface DateTransactionStateCache {
     date: Date,
-    snapshots: {
+    states: {
         [accountId: string]: IAccountSnapshot | Promise<IAccountSnapshot>
     }
 }
@@ -151,7 +147,7 @@ async function getSnapshot(d: Date, account: string): Promise<IAccountSnapshot |
     let snapshot = cachedSnapshots.search({ date: d })
     if (!snapshot?.snapshots[account]) {
 
-        const snapshotPromise = Promise.resolve({} as IAccountSnapshot)
+        let snapshotPromise = Promise.resolve({} as IAccountSnapshot)
 
         if (!snapshot) {
             snapshot = { date: d, snapshots: {} }
@@ -170,10 +166,10 @@ async function getRangeMinMax(from: Date, to: Date, bank?: BankId): RangeMinMax<
 */
 
 /**
- * /api/charts/absolute?unit=['d' | 'w' | 'M']&count=[number]&account=[string | 'accumulated']
+ * /api/charts/accumulated?unit=['d' | 'w' | 'M']&count=[number]&account=[string | 'accumulated']
  * multiple account params are allowed
  */
-chartRouter.get('/absolute', async (req, res) => {
+chartRouter.get('/accumulated', async (req, res) => {
     if (!req.query.count) {
         throw new Error('count query parameter required')
     }
@@ -188,15 +184,15 @@ chartRouter.get('/absolute', async (req, res) => {
 
     const unit = req.query.unit
 
-    let banks: 'accumulated' | string[] = req.query.bank as any
-    if (!banks) {
+    let accounts: 'accumulated' | string[] = req.query.account as any
+    if (!accounts) {
 
-        banks = (await AccountModel.find({})).map(m => m._id)
+        accounts = (await AccountModel.find({})).map(m => m._id)
     }
-    if (typeof banks === 'string' && banks !== 'accumulated') banks = [banks]
+    if (typeof accounts === 'string' && accounts !== 'accumulated') accounts = [accounts]
 
 
-    console.log(`absolute chart unit=${unit} count=${count} bank=${banks}`)
+    console.log(`absolute chart unit=${unit} count=${count} accounts=${accounts}`)
 
     res.json({})
 })

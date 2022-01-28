@@ -1,10 +1,9 @@
-import { AccountSnapshotModel, IAccountSnapshot, ITransaction, TransactionModel } from "../model";
+import { IAccountSnapshot, ITransaction, ParseFunc, StagedImport } from "@shared/model";
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
-import { genImportId, splitExistingTransactions } from "../util";
+import { splitExistingTransactions } from "../util";
 import { Types } from "mongoose";
-import { CsvParseResponse } from "../server";
-import { CsvParseFunc } from ".";
+import { TransactionModel } from "../model";
 dayjs.extend(customParseFormat)
 
 function log<T>(a: T): T {
@@ -33,7 +32,7 @@ CSV line schema 05.12.2021
 
 */
 
-export const parsePSD: CsvParseFunc = async (csv: string, importId: string) => {
+export const parsePSD: ParseFunc = async (csv: string, importId: string) => {
 
     
     const parsedRows: string[][] = csv.split('\n').map(row => {
@@ -46,8 +45,8 @@ export const parsePSD: CsvParseFunc = async (csv: string, importId: string) => {
     if (!accNr) {
         throw new Error('Failed to get Account id: Line "Konto:" missing from csv')
     }
-    const balanceRow = parsedRows.find(r => r[10]?.startsWith('Kontostand vom'))
-    if (!balanceRow) {
+    const balanceRow = parsedRows.at(-1)!
+    if (balanceRow[10] !== 'Endsaldo') {
         throw new Error('missing line in csv: "Endsaldo"')
     }
     const balanceDate = dayjs(balanceRow[0], 'DD.MM.YYYY').toDate()
@@ -105,10 +104,13 @@ export const parsePSD: CsvParseFunc = async (csv: string, importId: string) => {
         importId
     }
 
-    return {
+    let stagedImport: StagedImport = {
         snapshot,
         newTransactions: newTAs,
         duplicateTransactions: duplicateTAs,
-        importDate
+        importDate,
+        rawImportData: csv
     };
+
+    return stagedImport
 }
