@@ -31,4 +31,8 @@ export const router = createRouter({
             component: ImportFinished
         }
     ], // short for `routes: routes`
-  })
+})
+
+router.afterEach((to, from) => {
+    console.log(`navigated from ${from.fullPath} -> ${to.fullPath}`)
+})

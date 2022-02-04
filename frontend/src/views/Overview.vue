@@ -1,11 +1,12 @@
 <script lang="ts">
 import { defineComponent, ref } from '@vue/runtime-core';
-import { IAccountSnapshot } from '../../../src/model';
 import SnapshotChart from '../components/SnapshotChart.vue';
 import SnapshotList from '../components/SnapshotList.vue';
 import Popup from '../components/Popup.vue';
 import AddSnapshot from '../components/AddSnapshot.vue';
 import { fetchParse200JSON } from '../util';
+import { IAccountSnapshot } from '@shared/model';
+import dayjs, { Dayjs } from 'dayjs';
 
 type ChartState = {
 	mode: 'accumulated',
@@ -27,7 +28,10 @@ export default defineComponent({
 				let res
 				switch (chartState.value.mode) {
 					case 'accumulated':
-						res = await fetch('/api/charts/accumulated?count=12&unit=M').then(fetchParse200JSON)
+						const now = dayjs()
+						const from = now.subtract(12, 'months')
+
+						res = await fetch(`/api/charts/accumulated?from=${from.toISOString()}&to=${now.toISOString()}`).then(fetchParse200JSON)
 						break;
 					case 'relative':
 						res = await fetch('/api/charts/relative?count=12&unit=M').then(fetchParse200JSON)

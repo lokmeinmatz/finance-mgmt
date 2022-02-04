@@ -9,7 +9,7 @@ import { AccountModel, AccountSnapshotModel, TransactionModel } from './model'
 import { genImportId } from './util'
 import { chartRouter } from './api-charts'
 import PARSER_BANKS from './parsers'
-import { FinishedImport } from '@shared/model'
+import { FinishedImport, StagedImport } from '@shared/model'
 
 const router = express.Router()
 
@@ -32,7 +32,7 @@ router.use((req, res, next) => {
  */
 router.post('/import/:importId', express.json(), async (req, res) => {
     const importId = req.params.importId
-    const importData = req.body
+    const importData: Partial<StagedImport> = req.body
     
     
 
@@ -44,10 +44,10 @@ router.post('/import/:importId', express.json(), async (req, res) => {
     }
 
     // check that account exists
-    const account = await AccountModel.findById(importData.snapshot.id).exec()
+    const account = await AccountModel.findById(importData.snapshot.account).exec()
 
     if (!account) {
-        return res.status(400).send(`Could not find account ${importData.snapshot.id}`)
+        return res.status(400).send(`Could not find account ${importData.snapshot.account}`)
     }
 
     const lastSnapshot = account.lastSnapshot && await AccountSnapshotModel.findById(account.lastSnapshot).exec()

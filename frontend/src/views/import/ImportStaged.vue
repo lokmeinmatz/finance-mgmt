@@ -16,6 +16,7 @@ export default defineComponent({
         const router = useRouter();
         const importService = inject(ImportServiceKey)!;
         const id = useRoute().params.id as string;
+        const loading = ref(true)
         const data = ref<StagedImport>();
         const obs = importService.getImportState(typeof id === "string" ? id : "");
         function onUpdate(s: ImportState) {
@@ -24,11 +25,15 @@ export default defineComponent({
                 case "loading":
                     break;
                 case "staged":
+                    loading.value = false
                     data.value = s.stagedImport;
                     break;
                 case 'finished':
                     router.push(`/import/finished/${id}`)
                     break
+                case 'saving':
+                  loading.value = true
+                  break
                 default:
                     router.push("/import");
                     break;
@@ -43,10 +48,16 @@ export default defineComponent({
 
         function cancel() {
           importService.cancelImport(id)
+          router.replace('/import')
         }
 
         function finish() {
-          importService.finishImport(id)
+          try {
+            importService.finishImport(id)
+          } catch (error) {
+            alert(error)
+            loading.value = false
+          }
         }
 
         return {
@@ -54,6 +65,7 @@ export default defineComponent({
             finish,
             cancel,
             data,
+            loading
         };
     },
     components: { TransactionList }
@@ -63,7 +75,7 @@ export default defineComponent({
 <template>
   <main v-if="data">
     <h1>staged import {{id}}</h1>
-    <p>{{formatDate(data.importDate)}}</p>
+    <p>{{formatDate(data.snapshot.imported)}}</p>
     <table>
       <tr>
         <td>Account</td>
@@ -88,7 +100,7 @@ export default defineComponent({
     </table>
     <div class="actions">
       <button class="outline" @click="cancel">Cancel Import</button>
-      <button style="background-color: greenyellow; color: black;" @click="finish">Finish Import</button>
+      <button :aria-busy="loading" style="background-color: greenyellow; color: black;" @click="finish">Finish Import</button>
     </div>
     <details>
       <summary>new transactions ({{ data.newTransactions.length }})</summary>

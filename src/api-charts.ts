@@ -1,20 +1,9 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
 import dayjs from 'dayjs'
-import { AccountModel, TransactionModel } from './model'
-import { BSTreeKV } from 'typescript-collections'
-import { IAccountSnapshot } from '@shared/model'
+import { AccountModel, AccountSnapshotModel, TransactionModel } from './model'
+import { AccumulatedChartDataResponse, RelativeChartDataResponse } from '@shared/chart-data'
 
 export const chartRouter = express.Router()
-
-export interface ChartDataResponse<T> {
-    type: string,
-    from: string | number,
-    to: string | number,
-    data: T[]
-}
-
-export type RelativeChartDataResponse = ChartDataResponse<{ label: string, income: number, expenses: number, profit: number }>;
-export type AccumulatedChartDataResponse = ChartDataResponse<{ label: string, ranges: { [acc: string]: { min: number, max: number } } }>;
 
 /**
  * /api/charts/relative?count=[number]&unit=['d' | 'w' | 'M']
@@ -168,23 +157,10 @@ async function getRangeMinMax(from: Date, to: Date, bank?: BankId): RangeMinMax<
 */
 
 /**
- * /api/charts/accumulated?unit=['d' | 'w' | 'M']&count=[number]&account=[string | 'accumulated']
+ * /api/charts/accumulated?from=[string]&to=[string]&account=[string | 'accumulated']
  * multiple account params are allowed
  */
-chartRouter.get('/accumulated', async (req, res) => {
-    if (!req.query.count) {
-        throw new Error('count query parameter required')
-    }
-    const count = parseInt(req.query.count as string)
-
-    if (!req.query.unit) {
-        throw new Error('unit query parameter required')
-    }
-    if (!(['d', 'w', 'M'].includes(req.query.unit as string))) {
-        throw new Error('unit must be d | w |M')
-    }
-
-    const unit = req.query.unit
+async function getChartAccumulated(req: Request, res: Response<AccumulatedChartDataResponse | string>) {
 
     let accounts: 'accumulated' | string[] = req.query.account as any
     if (!accounts) {
@@ -193,8 +169,73 @@ chartRouter.get('/accumulated', async (req, res) => {
     }
     if (typeof accounts === 'string' && accounts !== 'accumulated') accounts = [accounts]
 
+    if (!req.query.from || !req.query.to) {
+        return res.status(400).send('required query params: from=[isoDate]&to=[isoDate]')
+    }
 
-    console.log(`absolute chart unit=${unit} count=${count} accounts=${accounts}`)
+    const from = dayjs(req.query.from as string)
+    const to = dayjs(req.query.to as string)
 
-    res.json({})
-})
+    console.log(`absolute chart from ${from} to ${to} accounts=${accounts}`)
+
+
+    const dailyData: {date: Date, balances: Record<string, number> }[] = []
+
+    let dd = from.clone()
+    while(!dd.isAfter(to)) {
+        dailyData.push({
+            date: dd.toDate(),
+            balances: {}
+        })
+        dd = dd.add(1, 'day')
+    }
+
+    if (accounts === 'accumulated') throw new Error('not implemented')
+
+    for (const acc of accounts) {
+        // for every account populate dailyData[x].balances
+        dd = from.clone()
+        // the closest older nsapshot
+        let oldestSnapshot = (await AccountSnapshotModel.find({ account: acc, date: { $lte: dd.toDate() } }).sort({ date: -1 }).limit(1).exec())[0]
+
+        let snapshots = await AccountSnapshotModel.find({ account: acc, date: { $gte: oldestSnapshot.date ?? from.toDate() } }).sort({ date: 1 }).exec()
+        
+        if (!snapshots.length) continue
+        let sIdx = 0
+        const lastSnapshot = () => snapshots[sIdx]
+
+        let currentBalance = lastSnapshot().balance
+        let tIdx = 0
+        let transactions = await TransactionModel.find({ account: acc, date: { $gte: lastSnapshot().date, $lte: snapshots.at(-1)!.date } }).sort({ date: 1 }).exec()
+
+        
+        for (let i = 0; i < dailyData.length; i++) {
+            const date = dailyData[i].date
+            while (true) {
+                if (snapshots[sIdx + 1] && transactions[tIdx].date >= snapshots[sIdx + 1].date ) {
+                    // use next snapshot as reference
+                    sIdx += 1
+                    currentBalance = snapshots[sIdx].balance
+                }
+
+                if (tIdx >= transactions.length || transactions[tIdx].date > date) {
+                    break
+                }
+
+                currentBalance += transactions[tIdx].amount
+                tIdx++
+            }
+
+            dailyData[i].balances[acc] = currentBalance
+        }
+    }
+
+    res.json({
+        type: 'accumulated',
+        from: from.toISOString(),
+        to: to.toISOString(),
+        data: []
+    })
+}
+
+chartRouter.get('/accumulated', getChartAccumulated)
