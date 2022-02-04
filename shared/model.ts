@@ -40,7 +40,7 @@ export interface IAccount {
     bank: string,
     name: string,
     type?: string,
-    currentBalance?: number
+    lastSnapshot?: Types.ObjectId
 }
 
 
@@ -51,6 +51,6 @@ export interface StagedImport {
     snapshot: IAccountSnapshot,
     newTransactions: ITransaction[]
     duplicateTransactions: ITransaction[]
-    importDate: Date,
-    rawImportData: string
 }
+
+export type FinishedImport = Omit<StagedImport, 'duplicateTransactions'>

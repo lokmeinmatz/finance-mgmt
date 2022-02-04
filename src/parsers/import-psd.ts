@@ -101,15 +101,14 @@ export const parsePSD: ParseFunc = async (csv: string, importId: string) => {
         date: balanceDate,
         source: 'import',
         imported: new Date(),
+        rawImportData: csv,
         importId
     }
 
     let stagedImport: StagedImport = {
         snapshot,
         newTransactions: newTAs,
-        duplicateTransactions: duplicateTAs,
-        importDate,
-        rawImportData: csv
+        duplicateTransactions: duplicateTAs
     };
 
     return stagedImport

@@ -5,47 +5,58 @@ import { inject } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ImportServiceKey, ImportState } from '../../import.service';
 import { formatDate } from '../../util';
+import TransactionList from '../../components/TransactionList.vue';
 
 
 export default defineComponent({
-  methods: {
-    formatDate
-  },
-  setup() {
-    const router = useRouter()
-    const importService = inject(ImportServiceKey)!
-    const id = useRoute().params.id
+    methods: {
+        formatDate
+    },
+    setup() {
+        const router = useRouter();
+        const importService = inject(ImportServiceKey)!;
+        const id = useRoute().params.id as string;
+        const data = ref<StagedImport>();
+        const obs = importService.getImportState(typeof id === "string" ? id : "");
+        function onUpdate(s: ImportState) {
+            console.log(s);
+            switch (s.state) {
+                case "loading":
+                    break;
+                case "staged":
+                    data.value = s.stagedImport;
+                    break;
+                case 'finished':
+                    router.push(`/import/finished/${id}`)
+                    break
+                default:
+                    router.push("/import");
+                    break;
+            }
+        }
+        const sub = obs?.subscribe({
+            next: onUpdate
+        });
+        onUnmounted(() => {
+            sub?.unsubscribe();
+        });
 
-    const data = ref<StagedImport>()
-    const obs = importService.getImportState(typeof id === 'string' ? id : '')
+        function cancel() {
+          importService.cancelImport(id)
+        }
 
-    function onUpdate(s: ImportState) {
-      console.log(s)
-      switch (s.state) {
-        case 'loading':
-          break;
-        case 'staged':
-          data.value = s.stagedImport
-          break;
-        default:
-          router.push('/import')
-          break;
-      }
-    }
+        function finish() {
+          importService.finishImport(id)
+        }
 
-    const sub = obs?.subscribe({
-      next: onUpdate
-    })
-
-    onUnmounted(() => {
-      sub?.unsubscribe()
-    })
-
-    return {
-      id,
-      data,
-    }
-  }
+        return {
+            id,
+            finish,
+            cancel,
+            data,
+        };
+    },
+    components: { TransactionList }
 })
 </script>
 
@@ -76,13 +87,19 @@ export default defineComponent({
       </tr>
     </table>
     <div class="actions">
-      <button class="outline">Cancel Import</button>
-      <button style="background-color: greenyellow; color: black;">Finish Import</button>
+      <button class="outline" @click="cancel">Cancel Import</button>
+      <button style="background-color: greenyellow; color: black;" @click="finish">Finish Import</button>
     </div>
     <details>
-      <summary>new transactions</summary>
+      <summary>new transactions ({{ data.newTransactions.length }})</summary>
       <div class="transactions">
-        
+        <TransactionList :transactions="data.newTransactions"></TransactionList>
+      </div>
+    </details>
+    <details>
+      <summary>duplicate transactions ({{ data.duplicateTransactions.length }})</summary>
+      <div class="transactions">
+        <TransactionList :transactions="data.newTransactions"></TransactionList>
       </div>
     </details>
   </main>
@@ -95,5 +112,9 @@ export default defineComponent({
 .actions {
   display: flex;
   gap: 1em;
+}
+
+.transactions > * {
+  width: 100%;
 }
 </style>

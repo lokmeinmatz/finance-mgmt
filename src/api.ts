@@ -9,8 +9,10 @@ import { AccountModel, AccountSnapshotModel, TransactionModel } from './model'
 import { genImportId } from './util'
 import { chartRouter } from './api-charts'
 import PARSER_BANKS from './parsers'
+import { FinishedImport } from '@shared/model'
 
 const router = express.Router()
+
 
 
 router.use((req, res, next) => {
@@ -23,6 +25,51 @@ router.use((req, res, next) => {
     res.on('finish', logReq)
 
     next()
+})
+
+/**
+ * /api/import/:importId body: `StagedImport`
+ */
+router.post('/import/:importId', express.json(), async (req, res) => {
+    const importId = req.params.importId
+    const importData = req.body
+    
+    
+
+    if (!(importData.snapshot
+        && importData.newTransactions
+        && importData.duplicateTransactions))
+    {
+        return res.status(400).send('missing field in StagedImport')    
+    }
+
+    // check that account exists
+    const account = await AccountModel.findById(importData.snapshot.id).exec()
+
+    if (!account) {
+        return res.status(400).send(`Could not find account ${importData.snapshot.id}`)
+    }
+
+    const lastSnapshot = account.lastSnapshot && await AccountSnapshotModel.findById(account.lastSnapshot).exec()
+
+    const snapshot = new AccountSnapshotModel(importData.snapshot)
+    snapshot.save()
+
+    if (!lastSnapshot || lastSnapshot.date < snapshot.date) {
+        account.lastSnapshot = snapshot._id
+        await account.save()
+    }
+
+    // save new transactions
+    if (importData.newTransactions) {
+        console.log('saving new transactions')
+        await TransactionModel.insertMany(importData.newTransactions)
+    }
+
+    res.json({
+        snapshot,
+        newTransactions: importData.newTransactions
+    } as FinishedImport)
 })
 
 

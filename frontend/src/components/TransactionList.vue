@@ -1,6 +1,6 @@
 <script lang="ts">
+import { ITransaction } from '@shared/model';
 import { defineComponent, PropType, ref } from 'vue'
-import { ITransaction } from '../../../src/model';
 import { formatDate } from '../util';
 
 export default defineComponent({
@@ -22,7 +22,7 @@ export default defineComponent({
   <table class="transactions-table">
       <tr>
           <th>Date</th>
-          <th>Bank</th>
+          <th>Account</th>
           <th>Amount</th>
           <th>Sender/Receiver</th>
           <th>Message</th>
@@ -31,7 +31,7 @@ export default defineComponent({
       </tr>
       <tr v-for="transaction of transactions" :key="transaction._id.toString()">
           <td>{{formatDate(transaction.date)}}</td>
-          <td>{{transaction.bank}}</td>
+          <td>{{transaction.account?.substring(0, 10) ?? '-'}}</td>
           <td :class="{amount: true, pos: transaction.amount >= 0, neg: transaction.amount < 0}"><p class="wrapper">{{transaction.amount}}€</p></td>
           <td :title="transaction.receiverOrSender">{{shorten(transaction.receiverOrSender, 20)}}...</td>
           <td :title="transaction.transactionMessage">{{shorten(transaction.transactionMessage, 100)}}</td>

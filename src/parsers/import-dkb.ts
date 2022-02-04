@@ -117,15 +117,14 @@ export const startDKBImport: ParseFunc = async (csv: string, importId: string) =
         date: balanceDate,
         source: 'import',
         imported: new Date(),
-        importId
+        importId,
+        rawImportData: csv
     }
 
     const stagedImport: StagedImport = {
         snapshot,
         newTransactions: newTAs,
-        duplicateTransactions: duplicateTAs,
-        importDate,
-        rawImportData: csv
+        duplicateTransactions: duplicateTAs
     };
 
     return stagedImport

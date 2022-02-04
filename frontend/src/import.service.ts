@@ -45,6 +45,42 @@ export class ImportService {
         return this.imports.get(id)?.asObservable()
     }
 
+    cancelImport(id: string): boolean {
+        const currImport = this.imports.get(id)
+        if (currImport) {
+            currImport.complete();
+            this.imports.delete(id)
+        }
+        return !!currImport
+    }
+
+    finishImport(id: string) {
+        // throw if import doesn't exist
+        const currImport = this.imports.get(id)
+        if (!currImport) throw new Error(`Import ${id} not found`)
+        const val = currImport.getValue()
+        const stagedImport = val.state === 'staged' && val.stagedImport
+
+        if (!stagedImport) throw new Error(`Import ${id} was not staged`)
+
+        currImport.next({ state: 'saving' })
+        const inner = async () => {
+            const res = await fetch(`/api/import/${id}`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(stagedImport)
+            })
+
+            if (res.status === 200) {
+                currImport.next({ state: 'finished', import: await res.json() })
+            } else {
+                currImport.error({ status: res.status, body: await res.text() })
+            }
+        }
+
+        inner()
+    }
+
     private supportedBanks?: Ref<string[]>
 
     getSupportedBanks(): Ref<string[]> {

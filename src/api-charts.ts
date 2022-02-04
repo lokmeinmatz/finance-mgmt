@@ -129,6 +129,8 @@ chartRouter.get('/relative', async (req, res) => {
     }
 })
 
+/*
+
 interface TransactionGroup {
     startValue: number,
     endValue: number,
@@ -159,7 +161,7 @@ async function getSnapshot(d: Date, account: string): Promise<IAccountSnapshot |
     return snapshot.snapshots[account]
 } 
 
-/*
+
 async function getRangeMinMax(from: Date, to: Date, bank?: BankId): RangeMinMax<Date, number> {
     const mostPrevSnapshot = await nearestSnapsot()
 }
