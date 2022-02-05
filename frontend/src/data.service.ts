@@ -1,7 +1,4 @@
-import { BehaviorSubject, Observable } from "rxjs";
-import { IAccount, IAccountSnapshot, ITransaction } from "../../src/model";
-import { genImportId } from '../../src/util'
-import { CsvParseResponse } from '../../src/server'
+import { IAccount } from "@shared/model";
 
 
 

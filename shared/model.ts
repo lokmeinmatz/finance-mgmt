@@ -40,7 +40,8 @@ export interface IAccount {
     bank: string,
     name: string,
     type?: string,
-    lastSnapshot?: Types.ObjectId
+    lastSnapshot?: Types.ObjectId,
+    metadata?: { color: string } & Record<string, any>
 }
 
 

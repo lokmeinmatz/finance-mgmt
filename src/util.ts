@@ -1,9 +1,5 @@
 import { ITransaction } from "@shared/model"
-
-export function genImportId(bank: string): string {
-    const random = Math.floor(1000 + Math.random()*1000).toString(16)
-    return `${bank}-${random}-${Date.now().toString(16)}`
-}
+import { createHash } from "crypto"
 
 export function splitExistingTransactions(newT: ITransaction[], existing: ITransaction[]): { newTAs: ITransaction[], duplicateTAs: ITransaction[]} {
     
@@ -24,4 +20,9 @@ export function splitExistingTransactions(newT: ITransaction[], existing: ITrans
     }
 
     return res
+}
+
+export function strToColor(input: string): `#${string}` {
+    const hashed = createHash('md5').update(input).digest('hex')
+    return `#${hashed.substring(0, 6).padEnd(6, '0')}`
 }

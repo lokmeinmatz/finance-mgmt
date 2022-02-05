@@ -1,19 +1,21 @@
 <script lang="ts">
 import { defineComponent, ref } from '@vue/runtime-core';
-import SnapshotChart from '../components/SnapshotChart.vue';
+import RelativeChart from '../components/RelativeChart.vue';
 import SnapshotList from '../components/SnapshotList.vue';
 import Popup from '../components/Popup.vue';
 import AddSnapshot from '../components/AddSnapshot.vue';
 import { fetchParse200JSON } from '../util';
 import { IAccountSnapshot } from '@shared/model';
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
+import { AccumulatedChartDataResponse, RelativeChartDataResponse } from '@shared/chart-data';
+import AccumulatedChart from '../components/AccumulatedChart.vue';
 
 type ChartState = {
 	mode: 'accumulated',
-	chartData?: any
+	chartData?: AccumulatedChartDataResponse
 } | {
 	mode: 'relative',
-	chartData?: any
+	chartData?: RelativeChartDataResponse
 }
 
 export default defineComponent({
@@ -25,16 +27,16 @@ export default defineComponent({
 
 		async function loadChartData() {
 			try {
-				let res
+				let res: AccumulatedChartDataResponse | RelativeChartDataResponse
 				switch (chartState.value.mode) {
 					case 'accumulated':
 						const now = dayjs()
-						const from = now.subtract(12, 'months')
+						const from = now.subtract(6, 'months')
 
-						res = await fetch(`/api/charts/accumulated?from=${from.toISOString()}&to=${now.toISOString()}`).then(fetchParse200JSON)
+						res = await fetch(`/api/charts/accumulated?from=${from.toISOString()}&to=${now.toISOString()}`).then(fetchParse200JSON) as AccumulatedChartDataResponse
 						break;
 					case 'relative':
-						res = await fetch('/api/charts/relative?count=12&unit=M').then(fetchParse200JSON)
+						res = await fetch('/api/charts/relative?count=12&unit=M').then(fetchParse200JSON) as RelativeChartDataResponse
 						break;
 				}
 				chartState.value.chartData = res
@@ -55,14 +57,22 @@ export default defineComponent({
 		loadChartData()
 		loadSnapshots()
 
+		function setChartMode(mode: ChartState['mode']) {
+			//resets
+			chartState.value = { mode }
+			loadChartData()
+		}
+
 		return {
+			setChartMode,
 			chartState,
 			snapshots,
 			showAddSnapshotPopup,
-			loadChartData
+			loadChartData,
+			loadSnapshots
 		};
 	},
-	components: { SnapshotChart, SnapshotList, Popup, AddSnapshot }
+	components: { RelativeChart, SnapshotList, Popup, AddSnapshot, AccumulatedChart }
 })
 </script>
 
@@ -72,12 +82,13 @@ export default defineComponent({
 		<div class="button-group">
 			<button 
 				:class="{ outline: chartState.mode !== 'accumulated' }"
-				@click="chartState.mode = 'accumulated'; loadChartData()">Accumulated</button>
+				@click="setChartMode('accumulated')">Accumulated</button>
 			<button
 				:class="{ outline: chartState.mode !== 'relative' }"
-				@click="chartState.mode = 'relative'; loadChartData()">Relative</button>
+				@click="setChartMode('relative')">Relative</button>
 		</div>
-		<SnapshotChart v-if="chartState.mode === 'relative' && chartState.chartData" :chartData="chartState.chartData" />
+		<RelativeChart v-if="chartState.mode === 'relative' && chartState.chartData" :chartData="chartState.chartData" />
+		<AccumulatedChart v-else-if="chartState.mode === 'accumulated' && chartState.chartData" :chartData="chartState.chartData" />
 		<p v-else>Loading chart data</p>
 		<SnapshotList v-if="snapshots" :snapshots="snapshots"></SnapshotList>
 		<p v-else>Loading snapshots</p>
@@ -86,7 +97,7 @@ export default defineComponent({
 		</footer>
 	</main>
 	<Popup v-model:open="showAddSnapshotPopup">
-		<AddSnapshot></AddSnapshot>
+		<AddSnapshot @finished="showAddSnapshotPopup = false; loadSnapshots()"></AddSnapshot>
 	</Popup>
 </template>
 

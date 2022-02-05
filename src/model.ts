@@ -50,7 +50,11 @@ export const AccountSchema = new mongoose.Schema<IAccount>({
     bank: String,
     name: String,
     type: { type: String, required: false },
-    lastSnapshot: { type: mongoose.Types.ObjectId, required: false }
+    lastSnapshot: { type: mongoose.Types.ObjectId, required: false },
+    metadata: {
+        color: String,
+        required: false
+    }
 })
 
 export const AccountModel = mongoose.model('account', AccountSchema);

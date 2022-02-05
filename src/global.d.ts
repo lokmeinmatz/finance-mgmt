@@ -1,5 +1,5 @@
 declare module 'express-fileupload' {
-    export default function(opts?: any);
+    export default function(opts?: any): any;
 }
 
 declare namespace Express {

@@ -7,4 +7,6 @@ export interface ChartDataResponse<T> {
 }
 
 export type RelativeChartDataResponse = ChartDataResponse<{ label: string, income: number, expenses: number, profit: number }>;
-export type AccumulatedChartDataResponse = ChartDataResponse<{ label: string, balances: { [acc: string]: number } }>;
+export type AccumulatedChartDataResponse = ChartDataResponse<{ label: string, balances: Record<string, number> }> & {
+    colors: Record<string, string>
+};

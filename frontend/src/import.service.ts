@@ -1,9 +1,8 @@
 import { StagedImport } from "@shared/model";
 import { BehaviorSubject, Observable } from "rxjs";
 import { InjectionKey, ref, Ref } from "vue";
-import { genImportId } from "../../src/util";
 import { fetchParse200JSON } from "./util";
-
+import { genImportId } from '../../shared/util'
 
 export type ImportState = {
     state: 'loading'

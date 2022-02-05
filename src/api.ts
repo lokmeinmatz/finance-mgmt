@@ -2,14 +2,13 @@
 import express from 'express'
 import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
-
+import { genImportId } from '@shared/util'
 dayjs.extend(isoWeek)
 
 import { AccountModel, AccountSnapshotModel, TransactionModel } from './model'
-import { genImportId } from './util'
 import { chartRouter } from './api-charts'
 import PARSER_BANKS from './parsers'
-import { FinishedImport, StagedImport } from '@shared/model'
+import { FinishedImport, IAccountSnapshot, StagedImport } from '@shared/model'
 
 const router = express.Router()
 
@@ -87,8 +86,8 @@ router.post('/transactions', express.json(), (req, res) => {
     })
 })
 
-router.post('/snapshots', express.json(), (req, res) => {
-    AccountSnapshotModel.find(req.body ?? {}).sort({ date: 'desc' }).exec().then(snapshots => {
+router.get('/snapshots', (req, res) => {
+    AccountSnapshotModel.find({}).sort({ date: 'desc' }).exec().then(snapshots => {
         res.json(snapshots)
     }).catch(e => {
         res.status(400)
@@ -96,6 +95,33 @@ router.post('/snapshots', express.json(), (req, res) => {
             error: e.toString()
         })
     })
+})
+
+// save new manual snapshot
+router.post('/snapshots', express.json(), async (req, res) => {
+    debugger
+    const snapshot: Partial<IAccountSnapshot> = req.body
+
+    if (!snapshot.account || !snapshot.balance || !snapshot.date) {
+        return res.status(400).send(`missing one of the fields account / balance / data in ${JSON.stringify(snapshot)}`)
+    }
+
+    const account = await AccountModel.findById(snapshot.account).exec()
+    if (!account) return res.status(400).send(`faield to find account ${snapshot.account}`)
+
+    // save actual snapshot
+    const dbSnapshot = await (new AccountSnapshotModel(snapshot)).save()
+    
+    const lastSnapshot = account.lastSnapshot && await AccountSnapshotModel.findById(account.lastSnapshot).exec()
+
+    if (!lastSnapshot || lastSnapshot.date < snapshot.date) {
+        // need to save as new lastSnapshot
+        account.lastSnapshot = dbSnapshot._id
+        await account.save()
+    }
+
+    res.status(200).json(dbSnapshot)
+
 })
 
 router.get('/parse/csv', (req, res) => {
