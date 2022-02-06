@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import express from 'express'
+import { genImportId } from '@shared/util'
 import { toPrintableTransaction, TransactionModel } from './model'
 import ApiRouter from './api'
 
@@ -14,6 +15,7 @@ if (!process.env.MONGODB_URL) {
     process.exit(-1)
 }
 
+genImportId('asdf')
 
 async function main() {
     console.log('connecting...')
