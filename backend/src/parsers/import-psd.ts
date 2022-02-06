@@ -1,4 +1,4 @@
-import { IAccountSnapshot, ITransaction, ParseFunc, StagedImport } from "@shared/model";
+import { IAccountSnapshot, ITransaction, ParseFunc, StagedImport } from "shared";
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import { splitExistingTransactions } from "../util";

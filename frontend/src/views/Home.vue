@@ -1,8 +1,8 @@
 <script lang="ts">
-import { defineComponent, ref } from '@vue/runtime-core';
+import { defineComponent, ref } from 'vue';
 import TransactionList from '../components/TransactionList.vue';
 import { concatAll, from, mergeScan, Observable, of, tap } from 'rxjs'
-import { ITransaction } from '../../../src/model';
+import { ITransaction } from 'shared';
 
 function scanFunc(acc: ITransaction[], val: any): Observable<ITransaction[]> {
  return from(fetch('/api/transactions', {

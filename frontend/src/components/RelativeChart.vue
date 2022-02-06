@@ -1,7 +1,7 @@
 <script lang="ts">
 import { defineComponent, onMounted, PropType, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
-import { RelativeChartDataResponse } from '@shared/chart-data';
+import { RelativeChartDataResponse } from 'shared';
 
 export default defineComponent({
   props: {

@@ -1,4 +1,4 @@
-import { ParseFunc } from "@shared/model";
+import { ParseFunc } from "shared";
 import { startDKBImport } from "./import-dkb";
 import { parsePSD } from "./import-psd";
 

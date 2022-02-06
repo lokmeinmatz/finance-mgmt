@@ -1,7 +1,7 @@
 <script lang="ts">
 import { defineComponent, onMounted, PropType, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
-import { AccumulatedChartDataResponse } from '@shared/chart-data';
+import { AccumulatedChartDataResponse } from 'shared';
 import 'chartjs-adapter-dayjs-3'
 
 
@@ -54,7 +54,7 @@ export default defineComponent({
             point: { radius: 0 }
           }
         }
-      })
+      }) as any
       console.log('created new chart')
     });
 

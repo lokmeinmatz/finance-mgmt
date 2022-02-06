@@ -2,13 +2,13 @@
 import express from 'express'
 import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
-import { genImportId } from '@shared/util'
+import { genImportId } from 'shared'
 dayjs.extend(isoWeek)
 
 import { AccountModel, AccountSnapshotModel, TransactionModel } from './model'
 import { chartRouter } from './api-charts'
 import PARSER_BANKS from './parsers'
-import { FinishedImport, IAccountSnapshot, StagedImport } from '@shared/model'
+import { FinishedImport, IAccountSnapshot, StagedImport } from 'shared'
 
 const router = express.Router()
 

@@ -1,13 +1,13 @@
 <script lang="ts">
-import { defineComponent, ref } from '@vue/runtime-core';
+import { defineComponent, ref } from 'vue';
 import RelativeChart from '../components/RelativeChart.vue';
 import SnapshotList from '../components/SnapshotList.vue';
 import Popup from '../components/Popup.vue';
 import AddSnapshot from '../components/AddSnapshot.vue';
 import { fetchParse200JSON } from '../util';
-import { IAccountSnapshot } from '@shared/model';
+import { IAccountSnapshot } from 'shared';
 import dayjs from 'dayjs';
-import { AccumulatedChartDataResponse, RelativeChartDataResponse } from '@shared/chart-data';
+import { AccumulatedChartDataResponse, RelativeChartDataResponse } from 'shared';
 import AccumulatedChart from '../components/AccumulatedChart.vue';
 
 type ChartState = {

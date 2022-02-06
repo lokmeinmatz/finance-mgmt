@@ -2,7 +2,7 @@ import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import { splitExistingTransactions } from "../util"
 import { ObjectId, Types } from 'mongoose'
-import { IAccountSnapshot, ITransaction, ParseFunc, StagedImport } from '@shared/model'
+import { IAccountSnapshot, ITransaction, ParseFunc, StagedImport } from 'shared'
 import { TransactionModel } from '../model'
 
 dayjs.extend(customParseFormat)

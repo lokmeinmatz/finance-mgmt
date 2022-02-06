@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express'
 import dayjs from 'dayjs'
 import { AccountModel, AccountSnapshotModel, TransactionModel } from './model'
-import { AccumulatedChartDataResponse, RelativeChartDataResponse } from '@shared/chart-data'
+import { AccumulatedChartDataResponse, RelativeChartDataResponse } from 'shared'
 import { strToColor } from './util'
 
 export const chartRouter = express.Router()

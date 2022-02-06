@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ITransaction } from '@shared/model';
+import { ITransaction } from 'shared'
 import { defineComponent, PropType, ref } from 'vue'
 import { formatDate } from '../util';
 

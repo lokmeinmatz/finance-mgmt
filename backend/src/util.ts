@@ -1,4 +1,4 @@
-import { ITransaction } from "@shared/model"
+import { ITransaction } from "shared"
 import { createHash } from "crypto"
 
 export function splitExistingTransactions(newT: ITransaction[], existing: ITransaction[]): { newTAs: ITransaction[], duplicateTAs: ITransaction[]} {

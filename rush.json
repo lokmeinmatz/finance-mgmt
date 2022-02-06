@@ -390,6 +390,16 @@
    */
   "projects": [
     {
+      "packageName": "frontend",
+      "projectFolder": "frontend",
+      "publishFolder": "dist"
+    },
+    {
+      "packageName": "backend",
+      "projectFolder": "backend",
+      "publishFolder": "dist"
+    },
+    {
       /**
        * The NPM package name of the project (must match package.json)
        */

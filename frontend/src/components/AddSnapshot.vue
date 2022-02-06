@@ -1,8 +1,8 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
 import { DataService } from '../data.service'
-import { IAccount, IAccountSnapshot } from '@shared/model'
-import { genImportId } from '@shared/util'
+import { IAccount, IAccountSnapshot } from 'shared'
+import { genImportId } from 'shared'
 
 export default defineComponent({
   emits: [ 'finished' ],

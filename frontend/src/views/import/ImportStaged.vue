@@ -1,6 +1,6 @@
 <script lang="ts">
-import { StagedImport } from '@shared/model';
-import { defineComponent, onUnmounted, ref } from '@vue/runtime-core';
+import { StagedImport } from 'shared';
+import { defineComponent, onUnmounted, ref } from 'vue';
 import { inject } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ImportServiceKey, ImportState } from '../../import.service';

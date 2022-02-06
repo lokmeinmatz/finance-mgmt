@@ -1,6 +1,6 @@
 <script lang="ts">
 import { defineComponent, PropType, ref } from 'vue'
-import { IAccountSnapshot } from '../../../src/model';
+import { IAccountSnapshot } from 'shared';
 import { formatDate } from '../util';
 
 export default defineComponent({
@@ -28,7 +28,7 @@ export default defineComponent({
           <th>ImportID</th>
       </tr>
       <tr v-for="snapshot of snapshots" :key="snapshot._id.toString()">
-          <td>{{snapshot.bank}}</td>
+          <td>{{snapshot.account}}</td>
           <td>{{formatDate(snapshot.date)}}</td>
           <td>{{snapshot.balance}}€</td>
           <td>{{formatDate(snapshot.imported)}}</td>

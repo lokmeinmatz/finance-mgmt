@@ -1,4 +1,4 @@
-import { IAccount } from "@shared/model";
+import { IAccount } from "shared";
 
 
 

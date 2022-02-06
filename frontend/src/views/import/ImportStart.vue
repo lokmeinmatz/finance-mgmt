@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent, ref, watch } from '@vue/runtime-core';
+import { defineComponent, ref, watch } from 'vue';
 import { inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { ImportServiceKey, ImportState } from '../../import.service';
