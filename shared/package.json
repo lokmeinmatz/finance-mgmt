@@ -1,3 +1,8 @@
 {
-    "main": "dist/index.js"
+    "name": "shared",
+    "private": true,
+    "scripts": {
+        "build": "tsc"
+    },
+    "dependencies": {}
 }
