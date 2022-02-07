@@ -22,12 +22,7 @@ async function main() {
 
 
     app.get('/', async (req, res) => {
-
-        const transactions = await (await TransactionModel.find({}).exec()).map(d => d.toObject())
-
-        res.render('home.hbs', {
-            transactions: transactions.map(toPrintableTransaction)
-        })
+        res.send('<h1>no spa served</h1><p>This server serves the api only!</p>')
     })
 
     app.use('/api', ApiRouter)

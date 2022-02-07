@@ -1,6 +1,19 @@
 <script setup lang="ts">
-import { provide } from 'vue';
+import { provide, ref } from 'vue';
 import { ImportService, ImportServiceKey } from './import.service';
+
+const isOnline = ref<undefined | boolean>(undefined)
+
+async function checkOnlineStatus() {
+  const res = await fetch(`/api/status`)
+  if (res.status === 200 && (await res.json()).status === 'online') {
+    isOnline.value = true
+  } else {
+    isOnline.value = false
+  }
+}
+
+checkOnlineStatus()
 
 // dependency injection
 provide(ImportServiceKey, new ImportService())
@@ -24,8 +37,14 @@ provide(ImportServiceKey, new ImportService())
       </li>
     </ul>
   </nav>
-  <div class="router-outlet">
+  <div class="router-outlet" v-if="isOnline === true">
     <router-view></router-view>
+  </div>
+  <div v-else-if="isOnline === false">
+    <h2 aria-busy="true">Connectiong to server...</h2>
+  </div>
+  <div v-else>
+    <h2>The server is unreachable!</h2>
   </div>
 </template>
 

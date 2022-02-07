@@ -26,6 +26,12 @@ router.use((req, res, next) => {
     next()
 })
 
+router.get('/status', (req, res) => {
+    res.json({
+        status: 'online'
+    })
+})
+
 /**
  * /api/import/:importId body: `StagedImport`
  */

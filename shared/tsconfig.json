@@ -2,8 +2,9 @@
     "include": ["src/"],
     "compilerOptions": {
         "target": "es2015", // Or whatever you want
-        "module": "UMD", // Or whatever you want
+        "module": "ES2020", // Or whatever you want
         "moduleResolution": "node",
+        "esModuleInterop": true,
         "declaration": true,
         "declarationMap": true,
         "outDir": "./dist",
