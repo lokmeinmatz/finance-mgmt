@@ -1,6 +1,8 @@
 import dayjs from 'dayjs'
-import mongoose, { Schema, Types } from 'mongoose'
+import mongoose from 'mongoose'
 import { IAccount, IAccountSnapshot, ITransaction, PrintableITransaction } from 'shared'
+
+const { Schema, Types } = mongoose;
 
 export function toDisplayDate(d: Date): string {
     return dayjs(d).format('DD.MM.YYYY HH:mm')

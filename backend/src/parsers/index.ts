@@ -1,6 +1,6 @@
 import { ParseFunc } from "shared";
-import { startDKBImport } from "./import-dkb";
-import { parsePSD } from "./import-psd";
+import { startDKBImport } from "./import-dkb.js";
+import { parsePSD } from "./import-psd.js";
 
 export default {
     'PSD-Giro': {

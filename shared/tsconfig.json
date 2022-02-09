@@ -1,14 +1,13 @@
 {
     "include": ["src/"],
+    "exclude": ["dist"],
     "compilerOptions": {
-        "target": "es2015", // Or whatever you want
+        "target": "esnext", // Or whatever you want
         "module": "ES2020", // Or whatever you want
         "moduleResolution": "node",
         "esModuleInterop": true,
-        "declaration": true,
-        "declarationMap": true,
-        "outDir": "./dist",
         "rootDir": "./src",
-        "composite": true
+        "declaration": true,
+        "outDir": "dist",
     }
 }

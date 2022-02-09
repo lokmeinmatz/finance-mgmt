@@ -1,9 +1,9 @@
 import { IAccountSnapshot, ITransaction, ParseFunc, StagedImport } from "shared";
 import dayjs from 'dayjs'
-import customParseFormat from 'dayjs/plugin/customParseFormat'
-import { splitExistingTransactions } from "../util";
-import { Types } from "mongoose";
-import { TransactionModel } from "../model";
+import customParseFormat from 'dayjs/plugin/customParseFormat.js'
+import { splitExistingTransactions } from "../util.js";
+import mongoose from "mongoose";
+import { TransactionModel } from "../model.js";
 dayjs.extend(customParseFormat)
 
 function log<T>(a: T): T {
@@ -72,7 +72,7 @@ export const parsePSD: ParseFunc = async (csv: string, importId: string) => {
         if (date < oldest) oldest = date
 
         const transaction: ITransaction = {
-            _id: new Types.ObjectId(),
+            _id: new mongoose.Types.ObjectId(),
             amount,
             date,
             imported: importDate,
@@ -95,7 +95,7 @@ export const parsePSD: ParseFunc = async (csv: string, importId: string) => {
     const { newTAs, duplicateTAs } = splitExistingTransactions(possibleTransactions, exsitingTransactions)
 
     const snapshot: IAccountSnapshot = {
-        _id: new Types.ObjectId(),
+        _id: new mongoose.Types.ObjectId(),
         account: accNr,
         balance: currentBalance,
         date: balanceDate,

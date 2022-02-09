@@ -1,8 +1,8 @@
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import express from 'express'
-import { toPrintableTransaction, TransactionModel } from './model'
-import ApiRouter from './api'
+import { toPrintableTransaction, TransactionModel } from './model.js'
+import ApiRouter from './api.js'
 
 
 console.log('finance-mgmt server')
