@@ -17,7 +17,7 @@ const router = express.Router()
 router.use((req, res, next) => {
     const start = Date.now()
     const logReq = () => {
-        console.log(`HTTP ${req.url} => ${res.statusCode} [${Date.now() - start}ms]`)
+        console.log(`HTTP ${req.method} ${req.url} => ${res.statusCode} [${Date.now() - start}ms]`)
     }
 
     res.on('error', logReq)
@@ -105,10 +105,10 @@ router.get('/snapshots', (req, res) => {
 
 // save new manual snapshot
 router.post('/snapshots', express.json(), async (req, res) => {
-    debugger
     const snapshot: Partial<IAccountSnapshot> = req.body
 
     if (!snapshot.account || !snapshot.balance || !snapshot.date) {
+        console.warn('POST /api/snapshots request with missing fields in body')
         return res.status(400).send(`missing one of the fields account / balance / data in ${JSON.stringify(snapshot)}`)
     }
 
@@ -125,6 +125,8 @@ router.post('/snapshots', express.json(), async (req, res) => {
         account.lastSnapshot = dbSnapshot._id
         await account.save()
     }
+
+    console.log('new snapshot stored: ' + dbSnapshot.importId)
 
     res.status(200).json(dbSnapshot)
 

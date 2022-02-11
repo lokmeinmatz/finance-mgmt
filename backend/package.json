@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node ./dist/server.js",
-    "serve:dev": "nodemon --watch dist --inspect ./dist/server.js"
+    "dev": "nodemon --watch dist --inspect ./dist/server.js"
   },
   "author": "lokmeinmatz",
   "license": "ISC",

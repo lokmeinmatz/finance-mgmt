@@ -45,9 +45,13 @@ export default defineComponent({
           }))
         },
         options: {
+          maintainAspectRatio: false,
           scales: {
             xAxes: {
               type: 'time'
+            },
+            y: {
+              stacked: true
             }
           },
           elements: {
@@ -64,13 +68,21 @@ export default defineComponent({
 })
 </script>
 <template>
-  <canvas ref="chartRootRef"></canvas>
+  <div class="chart-wrapper">
+    <canvas ref="chartRootRef"></canvas>
+  </div>
 </template>
 <style scoped lang="scss">
-table {
-  & .amount {
-    &.pos { background-color: aquamarine; }
-    &.neg { background-color: lightcoral; color: black; }
+.chart-wrapper {
+
+  position: relative;
+  height: min(500px, 80vh);
+
+  table {
+    & .amount {
+      &.pos { background-color: aquamarine; }
+      &.neg { background-color: lightcoral; color: black; }
+    }
   }
 }
 </style>

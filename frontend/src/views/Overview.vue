@@ -63,12 +63,19 @@ export default defineComponent({
 			loadChartData()
 		}
 
+		function addedSnapshot(data: any) {
+			showAddSnapshotPopup.value = false
+			alert(data)
+			loadSnapshots()
+		}
+
 		return {
 			setChartMode,
 			chartState,
 			snapshots,
 			showAddSnapshotPopup,
 			loadChartData,
+			addedSnapshot,
 			loadSnapshots
 		};
 	},
@@ -97,7 +104,7 @@ export default defineComponent({
 		</footer>
 	</main>
 	<Popup v-model:open="showAddSnapshotPopup">
-		<AddSnapshot @finished="showAddSnapshotPopup = false; loadSnapshots()"></AddSnapshot>
+		<AddSnapshot @finished="addedSnapshot"></AddSnapshot>
 	</Popup>
 </template>
 

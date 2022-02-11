@@ -1,26 +1,16 @@
 import typescript from 'rollup-plugin-typescript2'
-const name = require('./package.json').main.replace(/\.js$/, '')
-
-const bundle = config => ({
-  ...config,
-  input: 'src/index.ts',
-
-})
+const name = require('./package.json').module
 
 export default [
-  bundle({
+  {
+    input: 'src/index.ts',
     plugins: [typescript()],
     output: [
       {
-        file: `${name}.js`,
-        format: 'cjs',
-        sourcemap: true,
-      },
-      {
-        file: `${name}.mjs`,
+        file: name,
         format: 'es',
         sourcemap: true,
       },
     ],
-  })
+  }
 ]

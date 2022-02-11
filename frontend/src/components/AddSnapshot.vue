@@ -1,55 +1,92 @@
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
+import { computed, defineComponent, reactive, ref } from 'vue'
 import { DataService } from '../data.service'
 import { IAccount, IAccountSnapshot } from 'shared'
 import { genImportId } from 'shared'
 
 export default defineComponent({
-  emits: [ 'finished' ],
+  emits: [ 'finished', 'canceled' ],
   setup(props, { emit }) {
     const accounts = ref<IAccount[]>([])
     const selectedAccount = ref<IAccount>()
-    const balance = ref(0)
+    let balanceStr = ref('')
+    const balance = computed<number | undefined>(() => {
+      try {
+        let str = balanceStr.value.toString().trim()
+        
+        str = str.replace('€', '')
+        if (str.indexOf('.') < str.length - 3) {
+          // is probably of wrong format?
+          str = str.replaceAll('.', '')
+        }
+        
+        if (str.includes(',')) {
+          str = str.replace(',', '.')
+        }
+        return parseFloat(str)
+      } catch (e) {
+        return undefined
+      }
+    })
+
     const date = ref(new Date())
+
+    const loadingStates = reactive({
+      addingSnapshot: false
+    })
 
     async function init() {
       DataService.getAccounts().then(accs => accounts.value = accs)
     }
 
     async function saveSnapshot() {
+      loadingStates.addingSnapshot = true
 
-      if (!selectedAccount.value || !date.value) return alert('missing required inputs')
+      try {
+        if (!selectedAccount.value || !date.value || balance.value === undefined) throw new Error() 
+  
+        const snapshot: Omit<IAccountSnapshot, '_id'> = {
+          account: selectedAccount.value._id,
+          balance: balance.value,
+          date: date.value,
+          importId: genImportId(selectedAccount.value.bank),
+          imported: new Date(),
+          source: 'manual'
+        }
+  
+        const res = await fetch('/api/snapshots', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(snapshot)
+        })
+  
+        if (res.status !== 200) {
+          throw new Error('Error while adding snapshot: ' + await res.text())
+        }
 
-      const snapshot: Omit<IAccountSnapshot, '_id'> = {
-        account: selectedAccount.value._id,
-        balance: balance.value,
-        date: date.value,
-        importId: genImportId(selectedAccount.value.bank),
-        imported: new Date(),
-        source: 'manual'
+        const serverRes = await res.json()
+        console.log(serverRes)
+        emit('finished', serverRes)
+      } catch (error) {
+        console.error(error)
+        alert('missing required inputs')
+      } finally {
+        loadingStates.addingSnapshot = false
       }
 
-      const res = await fetch('/api/snapshots', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(snapshot)
-      })
-
-      if (res.status !== 200) {
-        return alert(await res.text())
-      }
-      console.log(await res.json())
-      emit('finished')
     }
+
 
     init()
 
     return {
       accounts,
       balance,
+      balanceStr,
       date,
       saveSnapshot,
-      selectedAccount
+      selectedAccount,
+      loadingStates
     }
   }
 })
@@ -63,12 +100,25 @@ export default defineComponent({
   </select>
   <label for="balance">
     Balance
-    <input id="balance" type="number" v-model="balance">
+    <input id="balance" type="text" v-model="balanceStr">
   </label>
+  <p>Parsed balance: {{ balance }}€</p>
   <label for="date">Date of snapshot
     <input type="date" id="date" v-model="date">
   </label>
+  <div class="actions">
+    <button class="outline" @click="$emit('canceled')">Cancel</button>
+    <button :aria-busy="loadingStates.addingSnapshot" @click="saveSnapshot()">Add</button>
+  </div>
 </template>
 
 <style scoped lang="scss">
+.actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5em;
+  @media screen and (min-width: 400px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 </style>
