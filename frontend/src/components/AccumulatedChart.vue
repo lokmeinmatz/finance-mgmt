@@ -48,14 +48,20 @@ export default defineComponent({
           maintainAspectRatio: false,
           scales: {
             xAxes: {
-              type: 'time'
+              type: 'time',
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              }
             },
             y: {
-              stacked: true
+              stacked: true,
+              grid: {
+                color: 'rgba(255, 255, 255, 0.3)'
+              }
             }
           },
           elements: {
-            point: { radius: 0 }
+            point: { radius: 0, hitRadius: 5 }
           }
         }
       }) as any

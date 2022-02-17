@@ -5,7 +5,7 @@ import { concatAll, from, mergeScan, Observable, of, tap } from 'rxjs'
 import { ITransaction } from 'shared';
 
 function scanFunc(acc: ITransaction[], val: any): Observable<ITransaction[]> {
- return from(fetch('/api/transactions', {
+ return from(fetch('/api/transactions?order=-1', {
           method: 'POST',
           body: JSON.stringify({})
         })

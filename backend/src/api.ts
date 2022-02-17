@@ -82,7 +82,13 @@ router.use('/charts', chartRouter)
 
 router.post('/transactions', express.json(), (req, res) => {
     console.log('/api/transactions', req.body)
-    TransactionModel.find(req.body ?? {}).exec().then(transactions => {
+
+    let order = 1
+    if (['desc', '-1'].includes(req.query.order as any)) {
+        order = -1
+    }
+
+    TransactionModel.find(req.body ?? {}).sort({ date: order }).exec().then(transactions => {
         res.json(transactions)
     }).catch(e => {
         res.status(400)

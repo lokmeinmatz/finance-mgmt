@@ -12,6 +12,50 @@ function log<T>(a: T): T {
     return a
 }
 
+type RowTransacton = Omit<ITransaction, 'imported' | 'importId' | 'account'>
+
+function parseDKBDebitTransaction(row: string[]): RowTransacton | undefined {
+
+    if (!row[0]?.match(/^\d+.\d+.\d+/)) return undefined
+
+    const date = dayjs(row[0], 'DD.MM.YYYY').toDate()
+    const transactionSource = `${row[3]}/${row[5]}`
+    const verwendung = row[4]
+    const amount = parseFloat(row[7].replace('.', '').replace(',', '.'))
+
+    const transaction: RowTransacton = {
+        _id: new mongoose.Types.ObjectId(),
+        amount,
+        date,
+        source: 'import',
+        receiverOrSender: log(transactionSource),
+        transactionMessage: verwendung,
+    }
+    return transaction
+}
+
+function parseDKBCreditTransaction(row: string[]): RowTransacton | undefined {
+    // example
+    // "Nein";"15.02.2022";"14.02.2022";"EDEKA FIL. 5447BERLIN";"-36,96";"";
+    if (!row[1]?.match(/^\d+.\d+.\d+/)) return undefined
+    if (!row[2]?.match(/^\d+.\d+.\d+/)) return undefined
+
+    const date = dayjs(row[2], 'DD.MM.YYYY').toDate()
+    const source = row[3]
+    const amount = parseFloat(row[4].replaceAll('.', '').replaceAll(',', '.'))
+    if (!date || !source || !isFinite(amount)) {
+        console.warn('error parsing row ' + row.join(', '))
+        return undefined
+    }
+    return {
+        _id: new mongoose.Types.ObjectId(),
+        amount,
+        date,
+        source: 'import',
+        receiverOrSender: source
+    }
+}
+
 export const startDKBImport: ParseFunc = async (csv: string, importId: string) => {
 
     const parsedRows: string[][] = csv.split('\n').map(row => {
@@ -76,29 +120,15 @@ export const startDKBImport: ParseFunc = async (csv: string, importId: string) =
     
     let oldest = new Date()
     let newest = new Date('1.1.2000')
+
+    const parseRowFunc = accountType === 'credit' ? parseDKBCreditTransaction : parseDKBDebitTransaction;
     
-    const possibleTransactions = parsedRows.filter(r => !!(r[0]?.match(/^\d+.\d+.\d+/))).map(r => {
-        const date = dayjs(r[0], 'DD.MM.YYYY').toDate()
-        const transactionSource = `${r[3]}/${r[5]}`
-        const verwendung = r[4]
-        const amount = parseFloat(r[7].replace('.', '').replace(',', '.'))
-
-        if (date > newest) newest = date
-        if (date < oldest) oldest = date
-
-        const transaction: ITransaction = {
-            _id: new mongoose.Types.ObjectId(),
-            amount,
-            date,
-            imported: importDate,
-            source: 'import',
-            account: accNr,
-            receiverOrSender: log(transactionSource),
-            transactionMessage: verwendung,
-            importId
-        }
-        return transaction
-    });
+    const possibleTransactions = parsedRows.map(parseRowFunc).filter(r => !!r).map(r => ({
+        ...r,
+        importId,
+        imported: importDate,
+        account: accNr 
+    } as ITransaction));
 
     newest = new Date(newest.getTime() + 1000 * 3600 * 24)
     oldest = new Date(oldest.getTime() - 1000 * 3600 * 24)

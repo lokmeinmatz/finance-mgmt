@@ -6,8 +6,10 @@ import ApiRouter from './api.js'
 
 
 console.log('finance-mgmt server')
+console.log('cwd: ' + process.cwd())
+console.log('dontenv: ', dotenv.config())
 
-dotenv.config()
+
 
 if (!process.env.MONGODB_URL) {
     console.error('provide env var MONGODB_URL')

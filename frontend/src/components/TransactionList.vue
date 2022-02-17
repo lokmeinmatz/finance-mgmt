@@ -1,9 +1,18 @@
 <script lang="ts">
-import { ITransaction } from 'shared'
+import { IAccount, ITransaction } from 'shared'
 import { defineComponent, PropType, ref } from 'vue'
 import { formatDate } from '../util';
 
 export default defineComponent({
+  setup() {
+    const accounts = ref<Map<string, IAccount>>()
+
+    fetch('/api/accounts').then(res => res.json()).then((apiAccs: IAccount[]) => accounts.value = new Map(apiAccs.map(acc => [acc._id, acc])))
+
+    return {
+      accounts
+    }
+  },
   methods: {
     formatDate,
     shorten(text: string | undefined, maxLength: number): string {
@@ -35,7 +44,10 @@ export default defineComponent({
           <td :class="{amount: true, pos: transaction.amount >= 0, neg: transaction.amount < 0}"><p class="wrapper">{{transaction.amount}}€</p></td>
           <td :title="transaction.receiverOrSender">{{shorten(transaction.receiverOrSender, 20)}}...</td>
           <td :title="transaction.transactionMessage">{{shorten(transaction.transactionMessage, 100)}}</td>
-          <td>{{transaction.account}}</td>
+          <td>
+            <span v-if="accounts && transaction.account">{{accounts.get(transaction.account)?.name}}</span>
+            <span v-else aria-busy="true"></span>
+          </td>
           <td>{{formatDate(transaction.imported)}}</td>
       </tr>
   </table>

@@ -82,12 +82,7 @@ $primary-hue: 190;
 
   & .router-outlet {
     margin: 0 auto;
-    max-width: 600px;
     padding: 0 1rem;
-
-    @media screen and (min-width: 1000px) {
-      max-width: 800px;
-    }
   }
 }
 
