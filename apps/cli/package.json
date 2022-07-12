@@ -1,0 +1,26 @@
+{
+  "name": "cli",
+  "version": "0.0.0",
+  "description": "CLI to manage finance data",
+  "author": "lokmeinmatz @lokmeinmatz",
+  "homepage": "https://github.com/lokmeinmatz/finance-mgmt",
+  "license": "MIT",
+  "repository": "lokmeinmatz/finance-mgmt",
+  "files": [
+    "/dist"
+  ],
+  "dependencies": {
+    "rimraf": "^3.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^4.4.3"
+  },
+  "peerDependencies": {
+    "@types/node": "18.0.3"
+  },
+  "scripts": {
+    "build": "rimraf ./dist && tsc -b",
+    "exec": "pnpm run build && node dist/index.js"
+  },
+  "types": "dist/index.d.ts"
+}
